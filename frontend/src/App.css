@@ -139,7 +139,7 @@ header {
    CARDS & AULA
    ========================================================= */
 .content-grid {
-    max-width: 800px;
+    max-width: 900px; /* Leve aumento para tabelas admin */
     margin: 40px auto;
     padding: 0 20px;
 }
@@ -155,7 +155,7 @@ header {
 }
 
 .aula-header {
-    margin-bottom: 35px; /* Espaço para a data e botões */
+    margin-bottom: 35px;
 }
 
 .aula-header small {
@@ -184,7 +184,7 @@ header {
    ========================================================= */
 .aula-actions {
     display: flex;
-    gap: 20px; /* Espaço horizontal entre botões */
+    gap: 20px;
 }
 
 .btn-primary, .btn-save {
@@ -202,7 +202,10 @@ header {
     justify-content: center;
 }
 
-.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:hover { 
+    background: var(--accent-hover); 
+    box-shadow: 0 4px 12px var(--accent-glow);
+}
 
 .btn-checkout {
     background: transparent !important;
@@ -225,6 +228,7 @@ header {
     display: flex;
     align-items: center;
     justify-content: center;
+    font-weight: 600;
 }
 
 /* =========================================================
@@ -264,7 +268,6 @@ header {
     cursor: pointer;
 }
 
-.editor-box { margin: 20px 0; }
 .rating-group { display: flex; gap: 8px; }
 
 .input-notes {
@@ -281,14 +284,39 @@ header {
     box-sizing: border-box;
 }
 
-.btn-save { width: 100%; }
-
+/* =========================================================
+   ESTATÍSTICAS & HISTÓRICO
+   ========================================================= */
 .perfil-info {
   background: var(--card);
-  padding: 20px;
-  border-radius: 16px;
-  margin-bottom: 20px;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
   border: 1px solid var(--border);
+}
+
+.stats-container {
+    display: flex;
+    gap: 16px;
+    margin-top: 15px;
+}
+
+.stat-card {
+    flex: 1;
+    background: var(--bg);
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+
+.stat-card strong {
+    color: var(--accent);
+    font-size: 1.1rem;
+    display: block;
+    margin-bottom: 4px;
 }
 
 .historico-table {
@@ -302,7 +330,7 @@ header {
 }
 
 .historico-table th, .historico-table td {
-  padding: 15px;
+  padding: 16px;
   text-align: left;
   border-bottom: 1px solid var(--border);
 }
@@ -311,31 +339,96 @@ header {
   background: var(--accent-glow);
   color: var(--accent);
   text-transform: uppercase;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
+
+.historico-table tr:last-child td { border-bottom: none; }
 
 .select-box {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.select-box select {
-  padding: 8px;
-  border-radius: 8px;
+.select-box select, .select-box input {
+  padding: 10px 14px;
+  border-radius: 10px;
   background: var(--card);
   color: var(--text-main);
   border: 1px solid var(--border);
+  font-family: inherit;
+  outline: none;
 }
+
+/* =========================================================
+   ADMIN DASHBOARD EXTRAS
+   ========================================================= */
+.admin-container {
+  background: var(--card);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  margin-top: 24px;
+}
+
+.admin-header-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-save {
+  background: #10b981; /* Verde esmeralda para exportação */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+}
+
+.btn-save:hover {
+  background: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Status de falta no relatório admin */
+.status-falta { color: #ef4444; font-weight: 600; }
+.status-presente { color: #10b981; font-weight: 600; }
 
 /* =========================================================
    RESPONSIVIDADE
    ========================================================= */
+@media (max-width: 768px) {
+    header { flex-direction: column; gap: 15px; padding: 1.5rem; text-align: center; }
+    .nav-actions { width: 100%; justify-content: center; flex-wrap: wrap; }
+    .content-grid { margin-top: 20px; }
+    .stats-container { flex-direction: column; }
+    .admin-header-box { flex-direction: column; align-items: flex-start; }
+    .admin-actions { width: 100%; flex-direction: column; align-items: stretch; }
+}
+
 @media (max-width: 600px) {
-    header { flex-direction: column; gap: 15px; padding: 1.5rem; }
-    .nav-actions { width: 100%; justify-content: space-between; }
     .aula { padding: 24px; }
     .aula-actions { flex-direction: column; width: 100%; }
-    .btn-primary { width: 100%; }
+    .btn-primary, .btn-checkout { width: 100%; }
+    .historico-table { font-size: 0.8rem; }
+    .historico-table th, .historico-table td { padding: 10px; }
 }

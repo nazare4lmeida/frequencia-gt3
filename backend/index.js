@@ -6,6 +6,8 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Middleware para garantir que o prefixo /api funcione corretamente na Vercel
 app.use('/api', (req, res, next) => next());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -13,10 +15,14 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 // LOGIN (ALUNO E ADMIN)
 app.post('/login', async (req, res) => {
   const { cpf, dataNascimento } = req.body;
-  
-  // ACESSO ADMIN SIMPLES (VOCÊ PODE MUDAR ESSA SENHA/CPF)
+
+  // LOGICA DE ADMIN (Credenciais fixas conforme combinado)
   if (cpf === '00000000000' && dataNascimento === '2026-01-01') {
-    return res.json({ nome: 'Administrador', role: 'admin', cpf: '00000000000' });
+    return res.json({ 
+      nome: 'Administrador', 
+      role: 'admin', 
+      cpf: '00000000000' 
+    });
   }
 
   try {
@@ -28,17 +34,26 @@ app.post('/login', async (req, res) => {
         .insert([{ cpf, data_nascimento: dataNascimento, nome: 'Estudante GT' }]).select().single();
       return res.json({ ...novo, role: 'aluno' });
     }
+    
     if (aluno.data_nascimento !== dataNascimento) return res.status(401).json({ error: "Data incorreta." });
+    
+    // Retorna os dados do aluno com a role 'aluno'
     res.json({ ...aluno, role: 'aluno' });
   } catch { res.status(500).json({ error: "Falha interna." }); }
 });
 
-// REGISTRAR PRESENÇA
+// PRESENÇA
 app.post('/presenca', async (req, res) => {
   const { cpf, formacao, tipo, data, nota, revisao } = req.body;
+  
   const [dia, mes, ano] = data.split('/');
   const dataFormatada = `${ano}-${mes}-${dia}`;
-  const dados = { cpf, formacao, data: dataFormatada, feedback: revisao || null, compreensao: nota || null };
+
+  const dados = {
+    cpf, formacao, data: dataFormatada,
+    feedback: revisao || null, compreensao: nota || null
+  };
+
   const agora = new Date().toISOString();
   if (tipo === 'in') dados.check_in = agora; else dados.check_out = agora;
 
@@ -49,25 +64,26 @@ app.post('/presenca', async (req, res) => {
   } catch { res.status(500).json({ error: "Erro interno." }); }
 });
 
-// HISTÓRICO INDIVIDUAL (PARA ALUNO E ADMIN BUSCAR)
+// HISTÓRICO (INDIVIDUAL)
 app.get('/historico/:cpf', async (req, res) => {
   const { cpf } = req.params;
   try {
     const { data, error } = await supabase.from('presencas').select('*').eq('cpf', cpf).order('data', { ascending: false });
     res.json(data);
-  } catch { res.status(500).json({ error: "Erro ao buscar histórico." }); }
+  } catch { res.status(500).json({ error: "Erro." }); }
 });
 
-// ROTA ADMIN: RELATÓRIO GERAL
+// ROTA ADMIN: RELATÓRIO GERAL (NOVA)
 app.get('/admin/relatorio-geral', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('presencas')
-      .select('*, alunos(nome)') // Puxa o nome do aluno junto
+      .select('*')
       .order('created_at', { ascending: false });
+      
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
-  } catch { res.status(500).json({ error: "Erro admin." }); }
+  } catch { res.status(500).json({ error: "Erro ao carregar relatório geral." }); }
 });
 
 if (process.env.NODE_ENV !== 'production') {

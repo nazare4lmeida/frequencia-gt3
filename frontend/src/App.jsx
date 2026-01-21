@@ -13,13 +13,15 @@ const FORMACOES = [
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [isDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [form, setForm] = useState({ cpf: '', dataNasc: '', formacao: 'fullstack' });
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCurso, setSelectedCurso] = useState(null);
   const [feedback, setFeedback] = useState({ nota: 0, revisao: '' });
   const [view, setView] = useState('aulas'); 
   const [historico, setHistorico] = useState([]);
+  
+  // Estados para o Painel Admin
   const [relatorioGeral, setRelatorioGeral] = useState([]);
   const [filtroTurma, setFiltroTurma] = useState('todos');
   const [buscaCpf, setBuscaCpf] = useState('');
@@ -34,7 +36,7 @@ export default function App() {
     return dates;
   }, []);
 
-  const [dataSel] = useState(segundas[0]);
+  const [dataSel, setDataSel] = useState(segundas[0]);
 
   useEffect(() => {
     isDarkMode ? document.body.classList.add('dark') : document.body.classList.remove('dark');
@@ -44,9 +46,15 @@ export default function App() {
     const agora = new Date();
     const hora = agora.getHours();
     const minuto = agora.getMinutes();
-    if (tipo === 'in') return hora >= 18 && hora < 20;
-    if (hora === 22) return minuto >= 0 && minuto <= 30;
-    return false;
+
+    if (tipo === 'in') {
+      return hora >= 18 && hora < 20;
+    } else {
+      if (hora === 22) {
+        return minuto >= 0 && minuto <= 30;
+      }
+      return false;
+    }
   };
 
   const handleLogin = async () => {
@@ -64,7 +72,9 @@ export default function App() {
       } else {
         alert(data.error);
       }
-    } catch { alert("Erro de conexão com o servidor."); }
+    } catch { 
+      alert("Erro de conexão com o servidor."); 
+    }
   };
 
   const carregarHistorico = async (cpfBusca) => {
@@ -76,7 +86,9 @@ export default function App() {
         setHistorico(data);
         setView('historico');
       }
-    } catch { alert("Erro ao carregar histórico."); }
+    } catch { 
+      alert("Erro ao carregar histórico."); 
+    }
   };
 
   const carregarRelatorioAdmin = async () => {
@@ -87,47 +99,77 @@ export default function App() {
         setRelatorioGeral(data);
         setView('admin-geral');
       }
-    } catch { alert("Erro ao carregar relatório administrativo."); }
+    } catch { 
+      alert("Erro ao carregar relatório administrativo."); 
+    }
   };
 
   const registrarPresenca = async (tipo, dadosExtra = {}) => {
     if (!validarHorario(tipo)) {
-      return alert(tipo === 'in' ? "Check-in: 18h às 20h." : "Check-out: 22h às 22h30.");
+      const msg = tipo === 'in' 
+        ? "O Check-in só é permitido entre 18:00 e 20:00." 
+        : "O Check-out só é permitido entre 22:00 e 22:30.";
+      return alert(msg);
     }
+
+    if (!selectedCurso || !user) return;
+    const agoraStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
     try {
       const res = await fetch(`${API_URL}/presenca`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cpf: user.cpf, formacao: selectedCurso, tipo, data: dataSel,
-          nota: dadosExtra.nota, revisao: dadosExtra.revisao
+          cpf: user.cpf,
+          formacao: selectedCurso,
+          tipo,
+          data: dataSel,
+          nota: dadosExtra.nota,
+          revisao: dadosExtra.revisao
         })
       });
-      if (res.ok) alert("Registro salvo com sucesso!");
-      else alert("Erro ao salvar.");
-    } catch { alert("Erro de conexão."); }
+
+      if (res.ok) {
+        alert(`✅ ${tipo === 'in' ? 'Check-in' : 'Check-out'} realizado com sucesso às ${agoraStr}!`);
+        if (tipo === 'out') { setModalOpen(false); setFeedback({ nota: 0, revisao: '' }); }
+      } else {
+        const errorData = await res.json();
+        alert("Erro no Banco: " + errorData.error);
+      }
+    } catch { 
+      alert("Erro ao salvar presença."); 
+    }
   };
 
   if (!user) {
     return (
       <div className="login-container">
+        <button className="btn-secondary theme-toggle" onClick={() => setIsDarkMode(!isDarkMode)}>{isDarkMode ? '☀️' : '🌙'}</button>
         <div className="login-card">
-          <h1>GERAÇÃO <span>TECH 3.0</span></h1>
-          <input placeholder="CPF" value={form.cpf} onChange={e => setForm({...form, cpf: e.target.value})} />
-          <input type="date" value={form.dataNasc} onChange={e => setForm({...form, dataNasc: e.target.value})} />
-          <select value={form.formacao} onChange={e => setForm({...form, formacao: e.target.value})}>
-            {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-          </select>
-          <button className="btn-primary" onClick={handleLogin}>Entrar no Portal</button>
+          <div className="brand"><h1>GERAÇÃO <span>TECH 3.0</span></h1></div>
+          <div id="loginForm">
+            <input placeholder="CPF" value={form.cpf} onChange={e => setForm({...form, cpf: e.target.value})} />
+            <input type="date" value={form.dataNasc} onChange={e => setForm({...form, dataNasc: e.target.value})} />
+            <div className="select-box" style={{marginTop: '10px'}}>
+              <label style={{color: 'white', fontSize: '0.8rem'}}>Sua Formação:</label>
+              <select value={form.formacao} onChange={e => setForm({...form, formacao: e.target.value})}>
+                {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
+            </div>
+            <button className="btn-primary" onClick={handleLogin}>Entrar no Portal</button>
+            <p style={{fontSize: '0.65rem', marginTop: '15px', opacity: 0.5, color: 'white'}}>Acesso Admin: 00000000000 / 01-01-2026</p>
+          </div>
         </div>
       </div>
     );
   }
 
+  const cursoAtual = FORMACOES.find(c => c.id === selectedCurso);
+
   return (
     <div className="app-wrapper">
       <header>
-        <div className="brand"><h1>GT <span>3.0</span></h1><div className="badge">{user.role.toUpperCase()}</div></div>
+        <div className="brand"><h1>GT <span>3.0</span></h1><div className="badge">{user.role?.toUpperCase() || 'ALUNO'}</div></div>
         <div className="nav-actions">
           {user.role === 'admin' ? (
             <>
@@ -140,58 +182,82 @@ export default function App() {
               <button className="btn-secondary" onClick={() => carregarHistorico()}>Meu Histórico</button>
             </>
           )}
-          <button className="btn-secondary" onClick={() => setUser(null)}>Sair</button>
+          <div className="tool-group">
+            <button className="btn-secondary" onClick={() => setIsDarkMode(!isDarkMode)}>{isDarkMode ? '☀️' : '🌙'}</button>
+            <button className="btn-secondary" onClick={() => setUser(null)}>Sair</button>
+          </div>
         </div>
       </header>
 
       <main className="content-grid">
+        {/* VIEW ADMIN: RELATÓRIO GERAL */}
         {user.role === 'admin' && view === 'admin-geral' && (
           <div className="historico-container">
             <h2>Relatório de Presenças por Turma</h2>
-            <select onChange={(e) => setFiltroTurma(e.target.value)} style={{marginBottom: '20px'}}>
-              <option value="todos">Todas as Turmas</option>
-              {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-            </select>
+            <div className="select-box" style={{marginBottom: '20px'}}>
+              <label>Filtrar por Formação:</label>
+              <select onChange={(e) => setFiltroTurma(e.target.value)} value={filtroTurma}>
+                <option value="todos">Todas as Turmas</option>
+                {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
+            </div>
             <table className="historico-table">
               <thead>
                 <tr><th>CPF</th><th>Turma</th><th>Data Aula</th><th>Entrada</th><th>Saída</th><th>Nota</th></tr>
               </thead>
               <tbody>
-                {relatorioGeral.filter(r => filtroTurma === 'todos' || r.formacao === filtroTurma).map((item, i) => (
-                  <tr key={i}>
-                    <td>{item.cpf}</td>
-                    <td>{item.formacao.toUpperCase()}</td>
-                    <td>{new Date(item.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-                    <td>{item.check_in ? new Date(item.check_in).toLocaleTimeString('pt-BR') : '-'}</td>
-                    <td>{item.check_out ? new Date(item.check_out).toLocaleTimeString('pt-BR') : '-'}</td>
-                    <td>{item.compreensao || '-'}</td>
-                  </tr>
-                ))}
+                {relatorioGeral
+                  .filter(r => filtroTurma === 'todos' || r.formacao === filtroTurma)
+                  .map((item, i) => (
+                    <tr key={i}>
+                      <td>{item.cpf}</td>
+                      <td>{item.formacao.toUpperCase()}</td>
+                      <td>{new Date(item.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+                      <td>{item.check_in ? new Date(item.check_in).toLocaleTimeString('pt-BR') : '-'}</td>
+                      <td>{item.check_out ? new Date(item.check_out).toLocaleTimeString('pt-BR') : '-'}</td>
+                      <td>{item.compreensao || '-'}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
         )}
 
+        {/* VIEW ADMIN: BUSCA INDIVIDUAL */}
         {user.role === 'admin' && view === 'admin-busca' && (
           <div className="historico-container">
             <h2>Consultar Aluno Individual</h2>
-            <div className="select-box">
-              <input placeholder="Digite o CPF" value={buscaCpf} onChange={e => setBuscaCpf(e.target.value)} />
+            <div className="select-box" style={{display: 'flex', gap: '10px', maxWidth: '400px'}}>
+              <input 
+                placeholder="Digite o CPF do Aluno" 
+                value={buscaCpf} 
+                onChange={e => setBuscaCpf(e.target.value)} 
+                style={{flex: 1}}
+              />
               <button className="btn-primary" onClick={() => carregarHistorico(buscaCpf)}>Buscar</button>
             </div>
           </div>
         )}
 
-        {(view === 'historico') && (
+        {/* VIEW: HISTÓRICO (COMUM PARA ALUNO OU RESULTADO DA BUSCA ADMIN) */}
+        {view === 'historico' && (
           <div className="historico-container">
-            <h2>Histórico de {user.role === 'admin' ? `CPF: ${buscaCpf}` : user.nome}</h2>
+            <div className="perfil-info">
+              <h2>{user.role === 'admin' ? `Histórico CPF: ${buscaCpf}` : 'Minha Frequência'}</h2>
+              {user.role !== 'admin' && (
+                <>
+                  <p><strong>Nome:</strong> {user.nome}</p>
+                  <p><strong>CPF:</strong> {user.cpf}</p>
+                </>
+              )}
+            </div>
             <table className="historico-table">
               <thead>
-                <tr><th>Data Aula</th><th>Turma</th><th>Entrada</th><th>Saída</th><th>Nota</th><th>Feedback</th></tr>
+                <tr><th>Data Aula</th><th>Formação</th><th>Entrada</th><th>Saída</th><th>Nota</th><th>Feedback</th></tr>
               </thead>
               <tbody>
-                {historico.map((item, i) => (
-                  <tr key={i}>
+                {historico.map((item, idx) => (
+                  <tr key={idx}>
                     <td>{new Date(item.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
                     <td>{item.formacao.toUpperCase()}</td>
                     <td>{item.check_in ? new Date(item.check_in).toLocaleTimeString('pt-BR') : '-'}</td>
@@ -202,34 +268,66 @@ export default function App() {
                 ))}
               </tbody>
             </table>
-            {user.role === 'admin' && <button className="btn-secondary" onClick={() => setView('admin-geral')}>Voltar</button>}
+            {user.role === 'admin' && (
+              <button className="btn-secondary" style={{marginTop: '20px'}} onClick={() => setView('admin-geral')}>Voltar ao Relatório</button>
+            )}
           </div>
         )}
 
+        {/* VIEW ALUNO: MARCAR PRESENÇA */}
         {user.role === 'aluno' && view === 'aulas' && (
-          <div className="aula">
-            <h3>{FORMACOES.find(c => c.id === selectedCurso)?.nome}</h3>
-            <p>Data selecionada: {dataSel}</p>
-            <div className="aula-actions">
-              <button className="btn-primary" onClick={() => registrarPresenca('in')}>CHECK-IN</button>
-              <button className="btn-primary btn-checkout" onClick={() => setModalOpen(true)}>CHECK-OUT</button>
+          <>
+            <div className="select-box">
+              <label>Data da aula:</label>
+              <select value={dataSel} onChange={e => setDataSel(e.target.value)}>
+                {segundas.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <label style={{marginLeft: '15px'}}>Trocar Turma:</label>
+              <select value={selectedCurso} onChange={e => setSelectedCurso(e.target.value)}>
+                {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
             </div>
-          </div>
+
+            {cursoAtual && (
+              <div className="aula">
+                <div className="aula-header">
+                  <small>{cursoAtual.tag}</small>
+                  <h3>{cursoAtual.nome}</h3>
+                  <span className="data-tag">Aula de {dataSel}</span>
+                </div>
+                <p style={{fontSize: '0.8rem', opacity: 0.7, marginBottom: '15px'}}>
+                  Check-in: 18h-20h | Check-out: 22h-22h30
+                </p>
+                <div className="aula-actions">
+                  <button className="btn-primary" onClick={() => registrarPresenca('in')}>CHECK-IN</button>
+                  <button className="btn-primary btn-checkout" onClick={() => setModalOpen(true)}>CHECK-OUT</button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 
       {modalOpen && (
         <div className="modal-overlay">
           <div className="aula modal-content">
+            <button className="close-modal" onClick={() => setModalOpen(false)}>&times;</button>
             <h3>Finalizar Aula</h3>
+            <p>Como foi sua compreensão do conteúdo hoje?</p>
             <div className="rating-group">
               {[1,2,3,4,5].map(n => (
-                <button key={n} onClick={() => setFeedback({...feedback, nota: n})} className="btn-secondary" style={{backgroundColor: feedback.nota === n ? 'var(--accent-glow)' : ''}}>{n}</button>
+                <button 
+                  key={n} 
+                  onClick={() => setFeedback({...feedback, nota: n})} 
+                  className="btn-secondary" 
+                  style={{flex:1, backgroundColor: feedback.nota === n ? 'var(--accent-glow)' : ''}}
+                >
+                  {n}
+                </button>
               ))}
             </div>
-            <textarea placeholder="O que revisar?" value={feedback.revisao} onChange={e => setFeedback({...feedback, revisao: e.target.value})} />
-            <button className="btn-save" onClick={() => { registrarPresenca('out', feedback); setModalOpen(false); }}>SALVAR</button>
-            <button className="btn-secondary" onClick={() => setModalOpen(false)}>CANCELAR</button>
+            <textarea className="input-notes" placeholder="O que revisar?" value={feedback.revisao} onChange={e => setFeedback({...feedback, revisao: e.target.value})} />
+            <button className="btn-save" onClick={() => registrarPresenca('out', feedback)}>SALVAR E SAIR</button>
           </div>
         </div>
       )}

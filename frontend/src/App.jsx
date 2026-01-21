@@ -157,7 +157,7 @@ export default function App() {
               </select>
             </div>
             <button className="btn-primary" onClick={handleLogin}>Entrar no Portal</button>
-            <p style={{fontSize: '0.65rem', marginTop: '15px', opacity: 0.5, color: 'white'}}>Acesso Admin: 00000000000 / 01-01-2026</p>
+            <p style={{fontSize: '0.65rem', marginTop: '15px', opacity: 0.5, color: 'white'}}>Acesse com seu cpf e data de nascimento e escolha sua formação.</p>
           </div>
         </div>
       </div>

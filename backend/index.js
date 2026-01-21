@@ -64,7 +64,7 @@ app.post('/presenca', async (req, res) => {
   } catch { res.status(500).json({ error: "Erro interno." }); }
 });
 
-// NOVA ROTA: BUSCAR HISTÓRICO (O QUE VOCÊ PEDIU)
+// NOVA ROTA: BUSCAR HISTÓRICO
 app.get('/historico/:cpf', async (req, res) => {
   const { cpf } = req.params;
   try {
@@ -79,4 +79,11 @@ app.get('/historico/:cpf', async (req, res) => {
   } catch { res.status(500).json({ error: "Erro ao buscar histórico." }); }
 });
 
-app.listen(3001, () => console.log("🚀 Backend rodando na porta 3001"));
+// ALTERAÇÃO PARA VERCEL:
+// Só roda o servidor localmente. Na Vercel, o 'app' é exportado.
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
+}
+
+module.exports = app;

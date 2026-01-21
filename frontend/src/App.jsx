@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
+const API_URL = "https://frequencia-gt3.vercel.app";
 
 const FORMACOES = [
   { id: 'fullstack', nome: 'Fullstack Developer', tag: 'WEB' },
@@ -36,7 +37,7 @@ export default function App() {
   const handleLogin = async () => {
     if (!form.cpf || !form.dataNasc) return alert("Preencha todos os campos!");
     try {
-      const res = await fetch('http://localhost:3001/login', {
+      const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cpf: form.cpf.replace(/\D/g, ''), dataNascimento: form.dataNasc })
@@ -48,7 +49,7 @@ export default function App() {
 
   const carregarHistorico = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/historico/${user.cpf}`);
+      const res = await fetch(`${API_URL}/historico/${user.cpf}`);
       const data = await res.json();
       if (res.ok) {
         setHistorico(data);
@@ -62,7 +63,7 @@ export default function App() {
     const agoraStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
     try {
-      const res = await fetch('http://localhost:3001/presenca', {
+      const res = await fetch(`${API_URL}/presenca`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

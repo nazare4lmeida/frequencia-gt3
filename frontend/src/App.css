@@ -1,0 +1,341 @@
+/* =========================================================
+   IMPORTAÇÃO E VARIÁVEIS
+   ========================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+
+:root {
+    --bg: #f8faff;
+    --header-bg: rgba(255, 255, 255, 0.85);
+    --card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #0b635b;
+    --accent-hover: #0f766e;
+    --accent-glow: rgba(13, 148, 136, 0.25);
+    --border: #e2e8f0;
+    --radius-lg: 24px;
+    --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+body.dark {
+    --bg: #0f172a;
+    --header-bg: rgba(15, 23, 42, 0.9);
+    --card: #1e293b;
+    --text-main: #f1f5f9;
+    --text-muted: #759aaf;
+    --accent: #146459;
+    --border: #2c3747;
+    --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================================
+   BASE
+   ========================================================= */
+body {
+    margin: 0;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--bg);
+    color: var(--text-main);
+    transition: background 0.3s ease;
+}
+
+.app-wrapper {
+    min-height: 100vh;
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+.login-container {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+}
+
+.theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 40px;
+    text-align: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+}
+
+#loginForm {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+#loginForm input {
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: inherit;
+    outline: none;
+}
+
+/* =========================================================
+   HEADER & BRAND
+   ========================================================= */
+header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 5%;
+    background: var(--header-bg);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.brand h1 span { color: var(--accent); }
+
+.badge {
+    padding: 4px 12px;
+    font-size: 0.7rem;
+    border-radius: 20px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.nav-actions { display: flex; align-items: center; gap: 15px; }
+.nav-actions select {
+    padding: 8px;
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+}
+
+.tool-group { display: flex; gap: 8px; }
+
+/* =========================================================
+   CARDS & AULA
+   ========================================================= */
+.content-grid {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.aula {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+    position: relative;
+}
+
+.aula-header {
+    margin-bottom: 35px; /* Espaço para a data e botões */
+}
+
+.aula-header small {
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.aula-header h3 { margin: 8px 0; font-size: 1.5rem; }
+
+.data-tag {
+    font-size: 0.8rem;
+    color: var(--accent);
+    background: var(--accent-glow);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+/* =========================================================
+   BOTÕES & AÇÕES
+   ========================================================= */
+.aula-actions {
+    display: flex;
+    gap: 20px; /* Espaço horizontal entre botões */
+}
+
+.btn-primary, .btn-save {
+    padding: 14px 24px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-checkout {
+    background: transparent !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.btn-checkout:hover {
+    border-color: var(--accent) !important;
+    background: var(--accent-glow) !important;
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* =========================================================
+   MODAL & RATING
+   ========================================================= */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 450px;
+    position: relative;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.close-modal {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.editor-box { margin: 20px 0; }
+.rating-group { display: flex; gap: 8px; }
+
+.input-notes {
+    width: 100%;
+    min-height: 120px;
+    margin: 20px 0;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: inherit;
+    resize: none;
+    box-sizing: border-box;
+}
+
+.btn-save { width: 100%; }
+
+.perfil-info {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+
+.historico-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+}
+
+.historico-table th, .historico-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.historico-table th {
+  background: var(--accent-glow);
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.select-box {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.select-box select {
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+}
+
+/* =========================================================
+   RESPONSIVIDADE
+   ========================================================= */
+@media (max-width: 600px) {
+    header { flex-direction: column; gap: 15px; padding: 1.5rem; }
+    .nav-actions { width: 100%; justify-content: space-between; }
+    .aula { padding: 24px; }
+    .aula-actions { flex-direction: column; width: 100%; }
+    .btn-primary { width: 100%; }
+}

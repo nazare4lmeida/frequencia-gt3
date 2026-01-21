@@ -44,7 +44,7 @@ body {
 }
 
 /* =========================================================
-   LOGIN
+   LOGIN & REMEMBER ME
    ========================================================= */
 .login-container {
     height: 100vh;
@@ -70,6 +70,24 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
+}
+
+.remember-box {
+    background: var(--bg);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    margin-top: 15px;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.75rem;
+    margin-top: 10px;
+    text-decoration: underline;
 }
 
 #loginForm {
@@ -124,115 +142,53 @@ header {
     text-transform: uppercase;
 }
 
-.nav-actions { display: flex; align-items: center; gap: 15px; }
-.nav-actions select {
-    padding: 8px;
-    border-radius: 10px;
-    background: var(--bg);
-    color: var(--text-main);
-    border: 1px solid var(--border);
-}
-
-.tool-group { display: flex; gap: 8px; }
-
 /* =========================================================
-   CARDS & AULA
+   DASHBOARD & BOTÃO ÚNICO
    ========================================================= */
 .content-grid {
-    max-width: 900px; /* Leve aumento para tabelas admin */
+    max-width: 600px;
     margin: 40px auto;
     padding: 0 20px;
 }
 
-.aula {
+.aula-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 32px;
-    margin-bottom: 24px;
+    text-align: center;
     box-shadow: var(--shadow);
-    position: relative;
 }
 
-.aula-header {
-    margin-bottom: 35px;
-}
-
-.aula-header small {
-    color: var(--accent);
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-}
-
-.aula-header h3 { margin: 8px 0; font-size: 1.5rem; }
-
-.data-tag {
-    font-size: 0.8rem;
-    color: var(--accent);
-    background: var(--accent-glow);
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-weight: 700;
-    text-transform: uppercase;
-    display: inline-block;
-    margin-top: 5px;
-}
-
-/* =========================================================
-   BOTÕES & AÇÕES
-   ========================================================= */
-.aula-actions {
-    display: flex;
-    gap: 20px;
-}
-
-.btn-primary, .btn-save {
-    padding: 14px 24px;
-    background: var(--accent);
-    color: white;
+.btn-ponto {
+    width: 100%;
+    padding: 20px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    border-radius: 15px;
+    cursor: pointer;
     border: none;
+    margin-top: 20px;
+    text-transform: uppercase;
+    transition: transform 0.2s, background 0.3s;
+}
+
+.btn-ponto:active { transform: scale(0.98); }
+
+.btn-ponto.in { background: #10b981; color: white; }
+.btn-ponto.out { background: #f59e0b; color: white; }
+
+.ponto-concluido {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--accent-glow);
+    color: var(--accent);
     border-radius: 12px;
     font-weight: 700;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-primary:hover { 
-    background: var(--accent-hover); 
-    box-shadow: 0 4px 12px var(--accent-glow);
-}
-
-.btn-checkout {
-    background: transparent !important;
-    color: var(--text-main) !important;
-    border: 1px solid var(--border) !important;
-}
-
-.btn-checkout:hover {
-    border-color: var(--accent) !important;
-    background: var(--accent-glow) !important;
-}
-
-.btn-secondary {
-    padding: 8px 16px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    color: var(--text-main);
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
 }
 
 /* =========================================================
-   MODAL & RATING
+   MODAL, FEEDBACK & NOTAS
    ========================================================= */
 .modal-overlay {
     position: fixed;
@@ -246,173 +202,133 @@ header {
 }
 
 .modal-content {
+    background: var(--card);
+    padding: 30px;
+    border-radius: var(--radius-lg);
     width: 90%;
-    max-width: 450px;
-    position: relative;
-    animation: slideUp 0.3s ease-out;
+    max-width: 400px;
+    text-align: center;
 }
 
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.close-modal {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: var(--text-muted);
-    cursor: pointer;
-}
-
-.rating-group { display: flex; gap: 8px; }
-
-.input-notes {
-    width: 100%;
-    min-height: 120px;
+.rating-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
     margin: 20px 0;
-    padding: 15px;
+}
+
+.rating-group button {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-main);
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.rating-group button.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.modal-content textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
     border-radius: 12px;
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text-main);
-    font-family: inherit;
     resize: none;
-    box-sizing: border-box;
+    margin-bottom: 20px;
 }
 
 /* =========================================================
-   ESTATÍSTICAS & HISTÓRICO
+   ALARMES E POPUPS
    ========================================================= */
-.perfil-info {
-  background: var(--card);
-  padding: 24px;
-  border-radius: var(--radius-lg);
-  margin-bottom: 24px;
-  border: 1px solid var(--border);
-}
-
-.stats-container {
+.alarme-box {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #f1c40f;
+    padding: 15px 25px;
+    border-radius: 50px;
+    z-index: 1500;
     display: flex;
-    gap: 16px;
-    margin-top: 15px;
+    gap: 15px;
+    align-items: center;
+    color: #000;
+    font-weight: 700;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    animation: slideUp 0.3s ease-out;
 }
 
-.stat-card {
-    flex: 1;
-    background: var(--bg);
-    padding: 16px;
-    border-radius: 16px;
-    border: 1px solid var(--border);
-    text-align: center;
-    font-size: 0.95rem;
-    color: var(--text-main);
+.alarme-box button {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
 }
 
-.stat-card strong {
-    color: var(--accent);
-    font-size: 1.1rem;
-    display: block;
-    margin-bottom: 4px;
+.custom-popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 28px;
+    border-radius: 12px;
+    z-index: 9999;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s forwards;
 }
 
-.historico-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--card);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  font-size: 0.9rem;
+.custom-popup.erro { background: #ef4444; }
+.custom-popup.sucesso { background: #10b981; }
+.custom-popup.aviso { background: #6366f1; }
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
-.historico-table th, .historico-table td {
-  padding: 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-
-.historico-table th {
-  background: var(--accent-glow);
-  color: var(--accent);
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-.historico-table tr:last-child td { border-bottom: none; }
-
-.select-box {
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.select-box select, .select-box input {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: var(--card);
-  color: var(--text-main);
-  border: 1px solid var(--border);
-  font-family: inherit;
-  outline: none;
+@keyframes slideUp {
+    from { transform: translate(-50%, 50px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
 }
 
 /* =========================================================
-   ADMIN DASHBOARD EXTRAS
+   BOTAO GERAL E UTILITARIOS
    ========================================================= */
-.admin-container {
-  background: var(--card);
-  padding: 32px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  margin-top: 24px;
+.btn-primary, .btn-save {
+    padding: 14px 24px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
 }
 
-.admin-header-box {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  gap: 20px;
-  flex-wrap: wrap;
+.btn-secondary {
+    padding: 8px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
 }
-
-.admin-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.btn-save {
-  background: #10b981; /* Verde esmeralda para exportação */
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: all 0.3s ease;
-  font-size: 0.85rem;
-}
-
-.btn-save:hover {
-  background: #059669;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-  transform: translateY(-1px);
-}
-
-/* Status de falta no relatório admin */
-.status-falta { color: #ef4444; font-weight: 600; }
-.status-presente { color: #10b981; font-weight: 600; }
-
 /* =========================================================
    RESPONSIVIDADE
    ========================================================= */

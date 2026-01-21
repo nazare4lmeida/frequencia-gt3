@@ -11,7 +11,26 @@ const FORMACOES = [
 ];
 
 export default function App() {
-  const [user, setUser] = useState(null);
+  // ==========================================
+  // INICIALIZAÇÃO DE ESTADO (EVITA ERRO DE RENDER)
+  // ==========================================
+  const [user, setUser] = useState(() => {
+    const sessaoSalva = localStorage.getItem("gt3_session");
+    if (sessaoSalva) {
+      const { userData, timestamp } = JSON.parse(sessaoSalva);
+      const meiaHora = 30 * 60 * 1000;
+      if (Date.now() - timestamp < meiaHora) return userData;
+      localStorage.removeItem("gt3_session");
+    }
+    return null;
+  });
+
+  const [selectedCurso, setSelectedCurso] = useState(() => {
+    const sessaoSalva = localStorage.getItem("gt3_session");
+    if (sessaoSalva) return JSON.parse(sessaoSalva).curso;
+    return "fullstack";
+  });
+
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [form, setForm] = useState({
     cpf: "",
@@ -20,7 +39,6 @@ export default function App() {
     formacao: "fullstack",
   });
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedCurso, setSelectedCurso] = useState(null);
   const [feedback, setFeedback] = useState({ nota: 0, revisao: "" });
   const [view, setView] = useState("aulas");
   const [historico, setHistorico] = useState([]);
@@ -44,23 +62,7 @@ export default function App() {
 
   const [dataSel, setDataSel] = useState(segundas[0]);
 
-  // ==========================================
-  // LÓGICA DE SESSÃO PERSISTENTE (MEIA HORA)
-  // ==========================================
-  useEffect(() => {
-    const sessaoSalva = localStorage.getItem("gt3_session");
-    if (sessaoSalva) {
-      const { userData, timestamp, curso } = JSON.parse(sessaoSalva);
-      const meiaHora = 30 * 60 * 1000;
-      if (Date.now() - timestamp < meiaHora) {
-        setUser(userData);
-        setSelectedCurso(curso);
-      } else {
-        localStorage.removeItem("gt3_session");
-      }
-    }
-  }, []);
-
+  // Logout limpa o estado e o storage
   const handleLogout = () => {
     localStorage.removeItem("gt3_session");
     setUser(null);
@@ -105,11 +107,21 @@ export default function App() {
       (r) => filtroTurma === "todos" || r.formacao === filtroTurma
     );
     
-    const totalPresencas = dados.filter(r => r.check_in).length;
-    const totalRegistros = dados.length;
+    // Conta presenças únicas por CPF/Data para evitar duplicidade de linhas
+    const presencasUnicas = new Set(dados.filter(r => r.check_in).map(r => `${r.cpf}-${r.data}`)).size;
+    
+    // Estimativa de faltas baseada no número de alunos únicos vs dias passados
+    const alunosUnicos = new Set(dados.map(r => r.cpf)).size;
+    const hoje = new Date();
+    const diasPassados = segundas.filter(d => {
+        const [dia, mes, ano] = d.split("/");
+        return new Date(ano, mes-1, dia) < hoje;
+    }).length;
 
-    return { totalPresencas, totalFaltas: totalRegistros - totalPresencas };
-  }, [relatorioGeral, filtroTurma]);
+    const faltasTotais = Math.max(0, (alunosUnicos * diasPassados) - presencasUnicas);
+
+    return { totalPresencas: presencasUnicas, totalFaltas: faltasTotais };
+  }, [relatorioGeral, filtroTurma, segundas]);
 
   // FUNÇÃO PARA EXPORTAR CSV (EXCEL)
   const exportarExcel = () => {
@@ -161,7 +173,6 @@ export default function App() {
       if (res.ok) {
         setUser(data);
         setSelectedCurso(form.formacao);
-        // Salva sessão para 30 minutos
         localStorage.setItem(
           "gt3_session",
           JSON.stringify({ userData: data, timestamp: Date.now(), curso: form.formacao })
@@ -232,7 +243,7 @@ export default function App() {
 
       if (res.ok) {
         alert(
-          `✅ ${tipo === "in" ? "Check-in" : "Check-out"} realizado com sucesso às ${agoraStr}!`,
+          `• ${tipo === "in" ? "Check-in" : "Check-out"} realizado com sucesso às ${agoraStr}!`,
         );
         if (tipo === "out") {
           setModalOpen(false);
@@ -255,7 +266,7 @@ export default function App() {
           className="btn-secondary theme-toggle"
           onClick={() => setIsDarkMode(!isDarkMode)}
         >
-          {isDarkMode ? "☀️" : "🌙"}
+          {isDarkMode ? "◒" : "◓"}
         </button>
         <div className="login-card">
           <div className="brand">
@@ -361,7 +372,7 @@ export default function App() {
               className="btn-secondary"
               onClick={() => setIsDarkMode(!isDarkMode)}
             >
-              {isDarkMode ? "☀️" : "🌙"}
+              {isDarkMode ? "◒" : "◓"}
             </button>
             <button className="btn-secondary" onClick={handleLogout}>
               Sair
@@ -386,7 +397,7 @@ export default function App() {
               <div>
                 <h2>Relatório de Presenças por Turma</h2>
                 <div style={{fontSize:'0.9rem', marginTop:'10px', opacity: 0.8}}>
-                  <strong>Turma Atual:</strong> {resumoAdmin.totalPresencas} Presenças | {resumoAdmin.totalFaltas} Faltas
+                  <strong>Turma Atual:</strong> {resumoAdmin.totalPresencas} Presenças Totais | {resumoAdmin.totalFaltas} Faltas Totais
                 </div>
               </div>
               <button
@@ -394,7 +405,7 @@ export default function App() {
                 onClick={exportarExcel}
                 style={{ backgroundColor: "#27ae60" }}
               >
-                📥 Exportar Excel
+                ↓ Exportar Excel
               </button>
             </div>
             <div className="select-box" style={{ marginBottom: "20px" }}>

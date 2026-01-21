@@ -30,7 +30,6 @@ app.post('/api/login', async (req, res) => {
     if (error) return res.status(500).json({ error: "Erro no banco." });
 
     if (!aluno) {
-      // No primeiro login, salva o nome preenchido pelo aluno no formulário
       const { data: novo, error: insError } = await supabase.from('alunos')
         .insert([{ 
           cpf, 
@@ -44,33 +43,69 @@ app.post('/api/login', async (req, res) => {
     
     if (aluno.data_nascimento !== dataNascimento) return res.status(401).json({ error: "Data incorreta." });
     
-    // Retorna os dados com a role que está no banco (importante para admins manuais)
     res.json({ ...aluno, role: aluno.role || 'aluno' });
   } catch { res.status(500).json({ error: "Falha interna." }); }
 });
 
-// PRESENÇA
+// PRESENÇA (Lógica de Upsert para manter na mesma linha)
 app.post('/api/presenca', async (req, res) => {
   const { cpf, formacao, tipo, data, nota, revisao } = req.body;
   const [dia, mes, ano] = data.split('/');
   const dataFormatada = `${ano}-${mes}-${dia}`;
-
-  const dados = {
-    cpf, formacao, data: dataFormatada,
-    feedback: revisao || null, compreensao: nota || null
-  };
-
   const agora = new Date().toISOString();
-  if (tipo === 'in') dados.check_in = agora; else dados.check_out = agora;
 
   try {
-    const { data: registro, error } = await supabase.from('presencas').insert([dados]).select();
-    if (error) return res.status(500).json({ error: error.message });
-    res.status(200).json(registro);
+    // 1. Verificar se já existe registro para este aluno, dia e formação
+    const { data: existente } = await supabase
+      .from('presencas')
+      .select('*')
+      .eq('cpf', cpf)
+      .eq('data', dataFormatada)
+      .eq('formacao', formacao)
+      .maybeSingle();
+
+    if (existente) {
+      // 2. Se existe, atualiza (UPDATE)
+      const updateDados = {};
+      if (tipo === 'in') {
+        updateDados.check_in = agora;
+      } else {
+        updateDados.check_out = agora;
+        updateDados.compreensao = nota;
+        updateDados.feedback = revisao;
+      }
+
+      const { data: atualizado, error: errUp } = await supabase
+        .from('presencas')
+        .update(updateDados)
+        .eq('id', existente.id)
+        .select();
+
+      if (errUp) return res.status(500).json({ error: errUp.message });
+      return res.status(200).json(atualizado);
+    } else {
+      // 3. Se não existe, cria novo (INSERT)
+      const novosDados = { cpf, formacao, data: dataFormatada };
+      if (tipo === 'in') {
+        novosDados.check_in = agora;
+      } else {
+        novosDados.check_out = agora;
+        novosDados.compreensao = nota;
+        novosDados.feedback = revisao;
+      }
+
+      const { data: criado, error: errIn } = await supabase
+        .from('presencas')
+        .insert([novosDados])
+        .select();
+
+      if (errIn) return res.status(500).json({ error: errIn.message });
+      return res.status(200).json(criado);
+    }
   } catch { res.status(500).json({ error: "Erro interno." }); }
 });
 
-// HISTÓRICO (INDIVIDUAL) - Ajustado para trazer nome
+// HISTÓRICO (INDIVIDUAL)
 app.get('/api/historico/:cpf', async (req, res) => {
   const { cpf } = req.params;
   try {
@@ -85,7 +120,7 @@ app.get('/api/historico/:cpf', async (req, res) => {
   } catch { res.status(500).json({ error: "Erro." }); }
 });
 
-// ROTA ADMIN: RELATÓRIO GERAL (Ajustado para trazer nome)
+// ROTA ADMIN: RELATÓRIO GERAL
 app.get('/api/admin/relatorio-geral', async (req, res) => {
   try {
     const { data, error } = await supabase

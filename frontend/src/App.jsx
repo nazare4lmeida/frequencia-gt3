@@ -50,12 +50,16 @@ export default function App() {
       : document.body.classList.remove("dark");
   }, [isDarkMode]);
 
+  // Lógica para calcular dias únicos de presença
+  const totalDiasPresentes = useMemo(() => {
+    return new Set(historico.map((h) => h.data)).size;
+  }, [historico]);
+
   // FUNÇÃO PARA EXPORTAR CSV (EXCEL)
   const exportarExcel = () => {
     const dadosFiltrados = relatorioGeral.filter(
       (r) => filtroTurma === "todos" || r.formacao === filtroTurma,
     );
-    // \ufeff é o BOM para o Excel reconhecer acentuação em nomes (UTF-8)
     let csv = "\ufeffNome;CPF;Turma;Data;Check-in;Check-out;Nota;Feedback\n";
 
     dadosFiltrados.forEach((row) => {
@@ -173,6 +177,8 @@ export default function App() {
           setModalOpen(false);
           setFeedback({ nota: 0, revisao: "" });
         }
+        // Recarrega o histórico após registrar para atualizar a tabela na hora
+        carregarHistorico();
       } else {
         const errorData = await res.json();
         alert("Erro no Banco: " + errorData.error);
@@ -408,7 +414,7 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW: HISTÓRICO (COMUM PARA ALUNO OU RESULTADO DA BUSCA ADMIN) */}
+        {/* VIEW: HISTÓRICO */}
         {view === "historico" && (
           <div className="historico-container">
             <div
@@ -445,7 +451,7 @@ export default function App() {
                       color: "var(--accent)",
                     }}
                   >
-                    {historico.length}
+                    {totalDiasPresentes}
                   </strong>
                   <small>Presenças</small>
                 </div>
@@ -467,7 +473,7 @@ export default function App() {
                       color: "#ef4444",
                     }}
                   >
-                    {TOTAL_AULAS - historico.length}
+                    {TOTAL_AULAS - totalDiasPresentes}
                   </strong>
                   <small>Faltas</small>
                 </div>

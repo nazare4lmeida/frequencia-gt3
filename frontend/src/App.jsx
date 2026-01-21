@@ -3,7 +3,7 @@ import './App.css';
 
 const API_URL = window.location.hostname === "localhost" 
   ? "http://localhost:3001" 
-  : "/api"; // 
+  : "/api";
 
 const FORMACOES = [
   { id: 'fullstack', nome: 'Fullstack Developer', tag: 'WEB' },
@@ -14,7 +14,7 @@ const FORMACOES = [
 export default function App() {
   const [user, setUser] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [form, setForm] = useState({ cpf: '', dataNasc: '' });
+  const [form, setForm] = useState({ cpf: '', dataNasc: '', formacao: 'fullstack' });
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCurso, setSelectedCurso] = useState(null);
   const [feedback, setFeedback] = useState({ nota: 0, revisao: '' });
@@ -37,6 +37,23 @@ export default function App() {
     isDarkMode ? document.body.classList.add('dark') : document.body.classList.remove('dark');
   }, [isDarkMode]);
 
+  const validarHorario = (tipo) => {
+    const agora = new Date();
+    const hora = agora.getHours();
+    const minuto = agora.getMinutes();
+
+    if (tipo === 'in') {
+      // Check-in: 18:00 às 20:00
+      return hora >= 18 && hora < 20;
+    } else {
+      // Check-out: 22:00 às 22:30
+      if (hora === 22) {
+        return minuto >= 0 && minuto <= 30;
+      }
+      return false;
+    }
+  };
+
   const handleLogin = async () => {
     if (!form.cpf || !form.dataNasc) return alert("Preencha todos os campos!");
     try {
@@ -46,7 +63,12 @@ export default function App() {
         body: JSON.stringify({ cpf: form.cpf.replace(/\D/g, ''), dataNascimento: form.dataNasc })
       });
       const data = await res.json();
-      if (res.ok) setUser(data); else alert(data.error);
+      if (res.ok) {
+        setUser(data);
+        setSelectedCurso(form.formacao); // Define a turma escolhida no login
+      } else {
+        alert(data.error);
+      }
     } catch { 
       alert("Erro de conexão com o servidor."); 
     }
@@ -66,6 +88,13 @@ export default function App() {
   };
 
   const registrarPresenca = async (tipo, dadosExtra = {}) => {
+    if (!validarHorario(tipo)) {
+      const msg = tipo === 'in' 
+        ? "O Check-in só é permitido entre 18:00 e 20:00." 
+        : "O Check-out só é permitido entre 22:00 e 22:30.";
+      return alert(msg);
+    }
+
     if (!selectedCurso || !user) return;
     const agoraStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -104,12 +133,21 @@ export default function App() {
           <div id="loginForm">
             <input placeholder="CPF" value={form.cpf} onChange={e => setForm({...form, cpf: e.target.value})} />
             <input type="date" value={form.dataNasc} onChange={e => setForm({...form, dataNasc: e.target.value})} />
+            <div className="select-box" style={{marginTop: '10px'}}>
+              <label style={{color: 'white', fontSize: '0.8rem'}}>Sua Formação:</label>
+              <select value={form.formacao} onChange={e => setForm({...form, formacao: e.target.value})}>
+                {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
+            </div>
             <button className="btn-primary" onClick={handleLogin}>Entrar no Portal</button>
           </div>
         </div>
       </div>
     );
   }
+
+  // Filtra para mostrar apenas o curso selecionado
+  const cursoAtual = FORMACOES.find(c => c.id === selectedCurso);
 
   return (
     <div className="app-wrapper">
@@ -134,20 +172,29 @@ export default function App() {
               <select value={dataSel} onChange={e => setDataSel(e.target.value)}>
                 {segundas.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
+              
+              <label style={{marginLeft: '15px'}}>Trocar Turma:</label>
+              <select value={selectedCurso} onChange={e => setSelectedCurso(e.target.value)}>
+                {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
             </div>
-            {FORMACOES.map(curso => (
-              <div key={curso.id} className="aula">
+
+            {cursoAtual && (
+              <div className="aula">
                 <div className="aula-header">
-                  <small>{curso.tag}</small>
-                  <h3>{curso.nome}</h3>
+                  <small>{cursoAtual.tag}</small>
+                  <h3>{cursoAtual.nome}</h3>
                   <span className="data-tag">Aula de {dataSel}</span>
                 </div>
+                <p style={{fontSize: '0.8rem', opacity: 0.7, marginBottom: '15px'}}>
+                  Check-in: 18h-20h | Check-out: 22h-22h30
+                </p>
                 <div className="aula-actions">
-                  <button className="btn-primary" onClick={() => { setSelectedCurso(curso.id); registrarPresenca('in'); }}>CHECK-IN</button>
-                  <button className="btn-primary btn-checkout" onClick={() => { setSelectedCurso(curso.id); setModalOpen(true); }}>CHECK-OUT</button>
+                  <button className="btn-primary" onClick={() => registrarPresenca('in')}>CHECK-IN</button>
+                  <button className="btn-primary btn-checkout" onClick={() => setModalOpen(true)}>CHECK-OUT</button>
                 </div>
               </div>
-            ))}
+            )}
           </>
         ) : (
           <div className="historico-container">
@@ -190,6 +237,7 @@ export default function App() {
           <div className="aula modal-content">
             <button className="close-modal" onClick={() => setModalOpen(false)}>&times;</button>
             <h3>Finalizar Aula</h3>
+            <p>Como foi sua compreensão do conteúdo hoje?</p>
             <div className="rating-group">
               {[1,2,3,4,5].map(n => (
                 <button key={n} onClick={() => setFeedback({...feedback, nota: n})} className="btn-secondary" style={{flex:1, backgroundColor: feedback.nota === n ? 'var(--accent-glow)' : ''}}>{n}</button>

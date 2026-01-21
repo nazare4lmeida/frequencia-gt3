@@ -13,77 +13,51 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 app.post('/login', async (req, res) => {
   const { cpf, dataNascimento } = req.body;
   try {
-    const { data: aluno, error: fetchError } = await supabase
-      .from('alunos')
-      .select('*')
-      .eq('cpf', cpf)
-      .maybeSingle();
-
-    if (fetchError) return res.status(500).json({ error: "Erro ao consultar banco." });
+    const { data: aluno, error } = await supabase.from('alunos').select('*').eq('cpf', cpf).maybeSingle();
+    if (error) return res.status(500).json({ error: "Erro no banco." });
 
     if (!aluno) {
-      const { data: novo, error: insError } = await supabase
-        .from('alunos')
-        .insert([{ cpf, data_nascimento: dataNascimento, nome: 'Estudante GT' }])
-        .select().single();
-      if (insError) return res.status(500).json({ error: "Erro no cadastro." });
+      const { data: novo, error: insError } = await supabase.from('alunos')
+        .insert([{ cpf, data_nascimento: dataNascimento, nome: 'Estudante GT' }]).select().single();
       return res.json(novo);
     }
-
     if (aluno.data_nascimento !== dataNascimento) return res.status(401).json({ error: "Data incorreta." });
     res.json(aluno);
   } catch { res.status(500).json({ error: "Falha interna." }); }
 });
 
-// REGISTRAR PRESENÇA
+// PRESENÇA (CORREÇÃO DE DATA PARA O SUPABASE)
 app.post('/presenca', async (req, res) => {
   const { cpf, formacao, tipo, data, nota, revisao } = req.body;
+  
+  // Converte "26/01/2026" para "2026-01-26" para evitar erro out of range
   const [dia, mes, ano] = data.split('/');
-  const dataFormatadaISO = `${ano}-${mes}-${dia}`;
+  const dataFormatada = `${ano}-${mes}-${dia}`;
 
-  const dadosRegistro = {
-    cpf,
-    formacao,
-    data: dataFormatadaISO,
-    feedback: revisao || null,
-    compreensao: nota || null,
+  const dados = {
+    cpf, formacao, data: dataFormatada,
+    feedback: revisao || null, compreensao: nota || null
   };
 
   const agora = new Date().toISOString();
-  if (tipo === 'in') dadosRegistro.check_in = agora;
-  else dadosRegistro.check_out = agora;
+  if (tipo === 'in') dados.check_in = agora; else dados.check_out = agora;
 
   try {
-    const { data: registro, error } = await supabase
-      .from('presencas')
-      .insert([dadosRegistro])
-      .select();
-
+    const { data: registro, error } = await supabase.from('presencas').insert([dados]).select();
     if (error) return res.status(500).json({ error: error.message });
     res.status(200).json(registro);
   } catch { res.status(500).json({ error: "Erro interno." }); }
 });
 
-// NOVA ROTA: BUSCAR HISTÓRICO
 app.get('/historico/:cpf', async (req, res) => {
   const { cpf } = req.params;
   try {
-    const { data, error } = await supabase
-      .from('presencas')
-      .select('*')
-      .eq('cpf', cpf)
-      .order('data', { ascending: false });
-
-    if (error) return res.status(500).json({ error: error.message });
+    const { data, error } = await supabase.from('presencas').select('*').eq('cpf', cpf).order('data', { ascending: false });
     res.json(data);
-  } catch { res.status(500).json({ error: "Erro ao buscar histórico." }); }
+  } catch { res.status(500).json({ error: "Erro." }); }
 });
 
-// ALTERAÇÃO PARA VERCEL:
-// Só roda o servidor localmente. Na Vercel, o 'app' é exportado.
 if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
+  app.listen(3001, () => console.log("🚀 Rodando local"));
 }
-
 module.exports = app;

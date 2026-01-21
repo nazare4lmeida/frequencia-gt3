@@ -14,7 +14,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 
 // LOGIN (ALUNO E ADMIN)
 app.post('/api/login', async (req, res) => {
-  const { cpf, dataNascimento } = req.body;
+  const { cpf, dataNascimento, nome } = req.body; // Recebe o nome enviado pelo frontend
 
   // LOGICA DE ADMIN (Credenciais fixas conforme combinado)
   if (cpf === '00000000000' && dataNascimento === '2026-01-01') {
@@ -30,13 +30,21 @@ app.post('/api/login', async (req, res) => {
     if (error) return res.status(500).json({ error: "Erro no banco." });
 
     if (!aluno) {
+      // No primeiro login, salva o nome preenchido pelo aluno
       const { data: novo, error: insError } = await supabase.from('alunos')
-        .insert([{ cpf, data_nascimento: dataNascimento, nome: 'Estudante GT' }]).select().single();
+        .insert([{ 
+          cpf, 
+          data_nascimento: dataNascimento, 
+          nome: nome || 'Estudante GT' // Usa o nome vindo do form
+        }]).select().single();
+      
+      if (insError) return res.status(500).json({ error: "Erro ao criar cadastro." });
       return res.json({ ...novo, role: 'aluno' });
     }
     
     if (aluno.data_nascimento !== dataNascimento) return res.status(401).json({ error: "Data incorreta." });
     
+    // Retorna os dados do aluno com a role 'aluno'
     res.json({ ...aluno, role: 'aluno' });
   } catch { res.status(500).json({ error: "Falha interna." }); }
 });
@@ -67,7 +75,14 @@ app.post('/api/presenca', async (req, res) => {
 app.get('/api/historico/:cpf', async (req, res) => {
   const { cpf } = req.params;
   try {
-    const { data, error } = await supabase.from('presencas').select('*').eq('cpf', cpf).order('data', { ascending: false });
+    // Adicionado o select do nome para que o cabeçalho do histórico exiba o nome do aluno buscado
+    const { data, error } = await supabase
+      .from('presencas')
+      .select('*, alunos(nome)') 
+      .eq('cpf', cpf)
+      .order('data', { ascending: false });
+    
+    if (error) return res.status(500).json({ error: "Erro ao buscar histórico." });
     res.json(data);
   } catch { res.status(500).json({ error: "Erro." }); }
 });

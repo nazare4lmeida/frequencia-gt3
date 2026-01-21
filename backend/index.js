@@ -37,7 +37,6 @@ app.post('/api/login', async (req, res) => {
     
     if (aluno.data_nascimento !== dataNascimento) return res.status(401).json({ error: "Data incorreta." });
     
-    // Retorna os dados do aluno com a role 'aluno'
     res.json({ ...aluno, role: 'aluno' });
   } catch { res.status(500).json({ error: "Falha interna." }); }
 });
@@ -73,20 +72,23 @@ app.get('/api/historico/:cpf', async (req, res) => {
   } catch { res.status(500).json({ error: "Erro." }); }
 });
 
-// ROTA ADMIN: RELATÓRIO GERAL (NOVA)
+// ROTA ADMIN: RELATÓRIO GERAL (Corrigida e com prefixo /api)
 app.get('/api/admin/relatorio-geral', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('presencas')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select(`
+        *,
+        alunos (nome)
+      `)
+      .order('data', { ascending: false });
       
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
-  } catch { res.status(500).json({ error: "Erro ao carregar relatório geral." }); }
+  } catch { res.status(500).json({ error: "Erro ao carregar relatório." }); }
 });
 
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(3001, () => console.log("🚀 Rodando local"));
+  app.listen(3001, () => console.log("🚀 Rodando local na porta 3001"));
 }
 module.exports = app;

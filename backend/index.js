@@ -13,7 +13,7 @@ app.use('/api', (req, res, next) => next());
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // LOGIN (ALUNO E ADMIN)
-app.post('/login', async (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { cpf, dataNascimento } = req.body;
 
   // LOGICA DE ADMIN (Credenciais fixas conforme combinado)
@@ -43,7 +43,7 @@ app.post('/login', async (req, res) => {
 });
 
 // PRESENÇA
-app.post('/presenca', async (req, res) => {
+app.post('/api/presenca', async (req, res) => {
   const { cpf, formacao, tipo, data, nota, revisao } = req.body;
   
   const [dia, mes, ano] = data.split('/');
@@ -65,7 +65,7 @@ app.post('/presenca', async (req, res) => {
 });
 
 // HISTÓRICO (INDIVIDUAL)
-app.get('/historico/:cpf', async (req, res) => {
+app.get('/api/historico/:cpf', async (req, res) => {
   const { cpf } = req.params;
   try {
     const { data, error } = await supabase.from('presencas').select('*').eq('cpf', cpf).order('data', { ascending: false });
@@ -74,7 +74,7 @@ app.get('/historico/:cpf', async (req, res) => {
 });
 
 // ROTA ADMIN: RELATÓRIO GERAL (NOVA)
-app.get('/admin/relatorio-geral', async (req, res) => {
+app.get('/api/admin/relatorio-geral', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('presencas')

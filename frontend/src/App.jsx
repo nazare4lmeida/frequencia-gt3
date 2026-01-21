@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
-const API_URL = "https://frequencia-gt3.vercel.app";
+
+// Configuração de URL dinâmica: usa localhost para testes e /api para a Vercel
+const API_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:3001" 
+  : "/api";
 
 const FORMACOES = [
   { id: 'fullstack', nome: 'Fullstack Developer', tag: 'WEB' },
@@ -44,7 +48,9 @@ export default function App() {
       });
       const data = await res.json();
       if (res.ok) setUser(data); else alert(data.error);
-    } catch { alert("Erro de conexão."); }
+    } catch { 
+      alert("Erro de conexão com o servidor."); 
+    }
   };
 
   const carregarHistorico = async () => {
@@ -55,7 +61,9 @@ export default function App() {
         setHistorico(data);
         setView('historico');
       }
-    } catch { alert("Erro ao carregar histórico."); }
+    } catch { 
+      alert("Erro ao carregar histórico."); 
+    }
   };
 
   const registrarPresenca = async (tipo, dadosExtra = {}) => {
@@ -83,7 +91,9 @@ export default function App() {
         const errorData = await res.json();
         alert("Erro no Banco: " + errorData.error);
       }
-    } catch { alert("Erro ao salvar presença."); }
+    } catch { 
+      alert("Erro ao salvar presença."); 
+    }
   };
 
   if (!user) {

@@ -889,6 +889,117 @@ header {
     border: 1px dashed var(--accent);
 }
 
+
+/* =========================================================
+   AJUSTES DE ALINHAMENTO COM App.jsx (SEM REMOVER NADA)
+   ========================================================= */
+
+/* Wrapper geral do app */
+.app-wrapper {
+  padding-bottom: 60px;
+}
+
+/* Card principal de ponto (App.jsx usa aula-card) */
+.aula-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow);
+  margin-bottom: 30px;
+}
+
+/* Conteúdo central melhor espaçado */
+.content-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* Container do histórico */
+.historico-container {
+  background: transparent;
+}
+
+/* Modal precisa parecer um card */
+.modal-content {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+/* Textarea real usado no JSX */
+.modal-content textarea {
+  width: 100%;
+  min-height: 100px;
+  margin: 15px 0;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-main);
+  font-family: inherit;
+  resize: none;
+}
+
+/* Grupo de avaliação (1–5) */
+.rating-group button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rating-group button:hover {
+  background: var(--accent-glow);
+}
+
+/* Header botão sair */
+header .btn-secondary {
+  height: 38px;
+}
+
+/* Histórico mais legível */
+.historico-table tr:hover td {
+  background: var(--bg);
+}
+
+/* Popup – garantir prioridade correta */
+.custom-popup {
+  min-width: 260px;
+  text-align: center;
+}
+
+.custom-popup.sucesso {
+  background: #16a34a;
+}
+
+.custom-popup.erro {
+  background: #dc2626;
+}
+
+/* Responsivo extra */
+@media (max-width: 480px) {
+  .aula-card {
+    padding: 24px;
+  }
+
+  .modal-content {
+    padding: 20px;
+  }
+
+  .btn-ponto {
+    font-size: 1rem;
+    padding: 16px;
+  }
+}
+
 /* =========================================================
 
    RESPONSIVIDADE
@@ -953,3 +1064,6 @@ header {
     padding: 10px;
   }
 }
+
+
+

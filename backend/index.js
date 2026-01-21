@@ -7,162 +7,236 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Middleware para garantir funcionamento correto na Vercel (/api/...)
-app.use('/api', (req, res, next) => next());
+// Middleware Vercel
+app.use('/api', (_, __, next) => next());
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+// Supabase
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 // ==========================================
 // FUNÇÃO AUXILIAR: VALIDAÇÃO DE HORÁRIO (SP)
 // ==========================================
 const getStatusHorario = () => {
-  const agora = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-  const hora = agora.getHours();
-  const diaSemana = agora.getDay(); // 1 = Segunda
+  const agora = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
+  );
 
-  // Validação: Somente segundas-feiras
+  const hora = agora.getHours();
+  const diaSemana = agora.getDay(); // 1 = segunda
+
   if (diaSemana !== 1) {
-    return { permitido: false, msg: "O registro de presença só está disponível às segundas-feiras." };
+    return {
+      permitido: false,
+      msg: 'Presença disponível apenas às segundas-feiras.'
+    };
   }
-  
-  // Janelas de tempo: Check-in (18h-20h) | Check-out (22h-23h)
+
   if (hora >= 18 && hora < 20) return { permitido: true, tipo: 'in' };
   if (hora >= 22 && hora < 23) return { permitido: true, tipo: 'out' };
-  
-  return { permitido: false, msg: "Fora do horário permitido: Entrada (18h-20h) ou Saída (22h-22:30h)." };
+
+  return {
+    permitido: false,
+    msg: 'Fora do horário permitido (18h–20h / 22h–23h).'
+  };
 };
 
 // ==========================================
-// ROTA: LOGIN (ADMIN E ALUNO)
+// LOGIN (ADMIN / ALUNO)
 // ==========================================
 app.post('/api/login', async (req, res) => {
-  const { email, dataNascimento, cpf, nome } = req.body;
+  const { email, dataNascimento, nome } = req.body;
 
-  // Lógica de Admin (Credenciais Fixas)
+  // ADMIN
   if (email === 'admin@gt3.com' && dataNascimento === '2026-01-01') {
-    return res.json({ nome: 'Administrador', role: 'admin', email: 'admin@gt3.com' });
+    return res.json({
+      nome: 'Administrador',
+      role: 'admin',
+      email
+    });
   }
 
   try {
-    // Busca aluno pelo e-mail
-    const { data: aluno, error } = await supabase.from('alunos')
-      .select('*').eq('email', email).maybeSingle();
+    const { data: aluno, error } = await supabase
+      .from('alunos')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
 
-    if (error) return res.status(500).json({ error: "Erro ao consultar banco de dados." });
+    if (error) throw error;
 
+    // Novo aluno (SEM CPF)
     if (!aluno) {
-      // Se não existir, cria um novo cadastro com os dados enviados
-      const { data: novo, error: insError } = await supabase.from('alunos')
-        .insert([{ 
-          email, 
-          cpf, 
-          data_nascimento: dataNascimento, 
-          nome: nome || 'Estudante GT' 
-        }]).select().single();
-      
-      if (insError) return res.status(500).json({ error: "Erro ao criar novo cadastro." });
+      const { data: novo, error: insertError } = await supabase
+        .from('alunos')
+        .insert([{
+          email,
+          nome: nome || 'Aluno GT',
+          data_nascimento: dataNascimento
+        }])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
       return res.json({ ...novo, role: 'aluno' });
     }
-    
-    // Valida data de nascimento para alunos existentes
+
     if (aluno.data_nascimento !== dataNascimento) {
-      return res.status(401).json({ error: "Data de nascimento incorreta para este e-mail." });
+      return res.status(401).json({ error: 'Data de nascimento inválida.' });
     }
-    
+
     res.json({ ...aluno, role: aluno.role || 'aluno' });
   } catch (err) {
-    res.status(500).json({ error: "Falha interna no servidor." });
+    res.status(500).json({ error: 'Erro no login.' });
   }
 });
 
 // ==========================================
-// ROTA: PONTO INTELIGENTE (UPSERT AUTOMÁTICO)
+// ATUALIZAR CPF (ALUNO LOGADO)
+// ==========================================
+app.post('/api/aluno/cpf', async (req, res) => {
+  const { aluno_id, cpf } = req.body;
+
+  if (!cpf || cpf.length < 11) {
+    return res.status(400).json({ error: 'CPF inválido.' });
+  }
+
+  try {
+    const { error } = await supabase
+      .from('alunos')
+      .update({ cpf })
+      .eq('id', aluno_id);
+
+    if (error) throw error;
+
+    res.json({ msg: 'CPF atualizado com sucesso.' });
+  } catch {
+    res.status(500).json({ error: 'Erro ao salvar CPF.' });
+  }
+});
+
+// ==========================================
+// REGISTRO DE PRESENÇA
 // ==========================================
 app.post('/api/ponto', async (req, res) => {
-  const { cpf, formacao, nota, feedback } = req.body;
-  
-  // 1. Valida o horário pelo servidor para evitar fraudes no relógio do PC
-  const status = getStatusHorario();
-  if (!status.permitido) return res.status(403).json({ error: status.msg });
+  const { aluno_id, formacao, nota, feedback } = req.body;
 
-  const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  if (!aluno_id) {
+    return res.status(400).json({ error: 'Aluno inválido.' });
+  }
+
+  const status = getStatusHorario();
+  if (!status.permitido) {
+    return res.status(403).json({ error: status.msg });
+  }
+
+  const hoje = new Date().toISOString().split('T')[0];
   const agora = new Date().toISOString();
 
   try {
-    // Busca se já existe registro do aluno hoje
-    const { data: existente } = await supabase.from('presencas')
-      .select('*').eq('cpf', cpf).eq('data', hoje).maybeSingle();
+    // Verifica se aluno tem CPF cadastrado
+    const { data: aluno } = await supabase
+      .from('alunos')
+      .select('cpf')
+      .eq('id', aluno_id)
+      .single();
 
-    // LÓGICA DE CHECK-IN (18h às 20h)
-    if (status.tipo === 'in') {
-      if (existente) return res.status(400).json({ error: "Check-in já realizado hoje!" });
-      
-      const { data, error } = await supabase.from('presencas')
-        .insert([{ cpf, formacao, data: hoje, check_in: agora }]).select();
-      
-      if (error) throw error;
-      return res.json({ msg: "Check-in realizado com sucesso!", status: 'in' });
-    } 
-
-    // LÓGICA DE CHECK-OUT (22h às 23h)
-    if (status.tipo === 'out') {
-      if (!existente) return res.status(400).json({ error: "Você precisa realizar o Check-in primeiro!" });
-      if (existente.check_out) return res.status(400).json({ error: "Check-out já realizado hoje!" });
-
-      const { data, error } = await supabase.from('presencas')
-        .update({ 
-          check_out: agora, 
-          compreensao: nota, 
-          feedback: feedback 
-        })
-        .eq('id', existente.id).select();
-      
-      if (error) throw error;
-      return res.json({ msg: "Check-out e feedback registrados!", status: 'out' });
+    if (!aluno?.cpf) {
+      return res.status(400).json({
+        error: 'CPF não cadastrado. Atualize antes de registrar presença.'
+      });
     }
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao processar o registro de ponto." });
+
+    const { data: existente } = await supabase
+      .from('presencas')
+      .select('*')
+      .eq('aluno_id', aluno_id)
+      .eq('data', hoje)
+      .maybeSingle();
+
+    // CHECK-IN
+    if (status.tipo === 'in') {
+      if (existente) {
+        return res.status(400).json({ error: 'Check-in já realizado.' });
+      }
+
+      await supabase.from('presencas').insert([{
+        aluno_id,
+        formacao,
+        data: hoje,
+        check_in: agora
+      }]);
+
+      return res.json({ msg: 'Check-in realizado.' });
+    }
+
+    // CHECK-OUT
+    if (status.tipo === 'out') {
+      if (!existente || existente.check_out) {
+        return res.status(400).json({ error: 'Check-out inválido.' });
+      }
+
+      await supabase
+        .from('presencas')
+        .update({
+          check_out: agora,
+          compreensao: nota,
+          feedback
+        })
+        .eq('id', existente.id);
+
+      return res.json({ msg: 'Check-out registrado.' });
+    }
+  } catch {
+    res.status(500).json({ error: 'Erro no registro de presença.' });
   }
 });
 
 // ==========================================
-// ROTAS DE CONSULTA (HISTÓRICO E ADMIN)
+// HISTÓRICO DO ALUNO (POR CPF)
 // ==========================================
-
-// Histórico Individual do Aluno
 app.get('/api/historico/:cpf', async (req, res) => {
-  const { cpf } = req.params;
   try {
-    const { data, error } = await supabase.from('presencas')
-      .select('*, alunos(nome)')
-      .eq('cpf', cpf)
+    const { data, error } = await supabase
+      .from('presencas')
+      .select('*, alunos(nome, cpf)')
+      .eq('alunos.cpf', req.params.cpf)
       .order('data', { ascending: false });
-    
+
     if (error) throw error;
+
     res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao buscar histórico." });
+  } catch {
+    res.status(500).json({ error: 'Erro ao buscar histórico.' });
   }
 });
 
-// Relatório Geral para Admin
-app.get('/api/admin/relatorio-geral', async (req, res) => {
+// ==========================================
+// RELATÓRIO GERAL (ADMIN)
+// ==========================================
+app.get('/api/admin/relatorio-geral', async (_, res) => {
   try {
-    const { data, error } = await supabase.from('presencas')
-      .select(`*, alunos (nome)`)
+    const { data, error } = await supabase
+      .from('presencas')
+      .select('*, alunos(nome, cpf)')
       .order('data', { ascending: false });
-      
+
     if (error) throw error;
+
     res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao carregar relatório geral." });
+  } catch {
+    res.status(500).json({ error: 'Erro no relatório.' });
   }
 });
 
-// Inicialização Local
+// ==========================================
+// SERVER LOCAL
+// ==========================================
 if (process.env.NODE_ENV !== 'production') {
-  const PORT = 3001;
-  app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+  app.listen(3001, () => console.log('🚀 Backend rodando na porta 3001'));
 }
 
 module.exports = app;

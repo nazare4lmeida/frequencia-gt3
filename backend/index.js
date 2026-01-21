@@ -6,11 +6,12 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/api', (req, res, next) => next());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // LOGIN
-app.post('/login', async (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { cpf, dataNascimento } = req.body;
   try {
     const { data: aluno, error } = await supabase.from('alunos').select('*').eq('cpf', cpf).maybeSingle();
@@ -27,7 +28,7 @@ app.post('/login', async (req, res) => {
 });
 
 // PRESENÇA (CORREÇÃO DE DATA PARA O SUPABASE)
-app.post('/presenca', async (req, res) => {
+app.post('/api/presenca', async (req, res) => {
   const { cpf, formacao, tipo, data, nota, revisao } = req.body;
   
   // Converte "26/01/2026" para "2026-01-26" para evitar erro out of range
@@ -49,7 +50,7 @@ app.post('/presenca', async (req, res) => {
   } catch { res.status(500).json({ error: "Erro interno." }); }
 });
 
-app.get('/historico/:cpf', async (req, res) => {
+app.get('/api/historico/:cpf', async (req, res) => {
   const { cpf } = req.params;
   try {
     const { data, error } = await supabase.from('presencas').select('*').eq('cpf', cpf).order('data', { ascending: false });

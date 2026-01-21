@@ -331,7 +331,7 @@ export default function App() {
       <header>
         <div className="brand">
           <h1>
-            GT <span>3.0</span>
+            Geração Tech <span>3.0</span>
           </h1>
           <div className="badge">{user.role?.toUpperCase() || "ALUNO"}</div>
         </div>

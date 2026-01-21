@@ -44,16 +44,72 @@ export default function App() {
 
   const [dataSel, setDataSel] = useState(segundas[0]);
 
+  // ==========================================
+  // LÓGICA DE SESSÃO PERSISTENTE (MEIA HORA)
+  // ==========================================
+  useEffect(() => {
+    const sessaoSalva = localStorage.getItem("gt3_session");
+    if (sessaoSalva) {
+      const { userData, timestamp, curso } = JSON.parse(sessaoSalva);
+      const meiaHora = 30 * 60 * 1000;
+      if (Date.now() - timestamp < meiaHora) {
+        setUser(userData);
+        setSelectedCurso(curso);
+      } else {
+        localStorage.removeItem("gt3_session");
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("gt3_session");
+    setUser(null);
+  };
+
   useEffect(() => {
     isDarkMode
       ? document.body.classList.add("dark")
       : document.body.classList.remove("dark");
   }, [isDarkMode]);
 
-  // Lógica para calcular dias únicos de presença
-  const totalDiasPresentes = useMemo(() => {
-    return new Set(historico.map((h) => h.data)).size;
-  }, [historico]);
+  // ==========================================
+  // LÓGICA DE FALTAS INTELIGENTES (DIAS PASSADOS)
+  // ==========================================
+  const estatisticasIndividuais = useMemo(() => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const diasLetivosPassados = segundas.filter((dataStr) => {
+      const [dia, mes, ano] = dataStr.split("/");
+      const dataAula = new Date(ano, mes - 1, dia);
+      const limitePresenca = new Date(dataAula);
+      limitePresenca.setHours(20, 0, 0); // Após 20h do dia da aula, já conta falta
+
+      return (
+        dataAula < hoje ||
+        (dataAula.getTime() === hoje.getTime() && new Date() > limitePresenca)
+      );
+    });
+
+    const totalPresentes = new Set(historico.map((h) => h.data)).size;
+    const faltasReais = Math.max(0, diasLetivosPassados.length - totalPresentes);
+
+    return { presencas: totalPresentes, faltas: faltasReais };
+  }, [historico, segundas]);
+
+  // ==========================================
+  // CONTAGEM TOTAL POR TURMA (PAINEL ADMIN)
+  // ==========================================
+  const resumoAdmin = useMemo(() => {
+    const dados = relatorioGeral.filter(
+      (r) => filtroTurma === "todos" || r.formacao === filtroTurma
+    );
+    
+    const totalPresencas = dados.filter(r => r.check_in).length;
+    const totalRegistros = dados.length;
+
+    return { totalPresencas, totalFaltas: totalRegistros - totalPresencas };
+  }, [relatorioGeral, filtroTurma]);
 
   // FUNÇÃO PARA EXPORTAR CSV (EXCEL)
   const exportarExcel = () => {
@@ -105,6 +161,11 @@ export default function App() {
       if (res.ok) {
         setUser(data);
         setSelectedCurso(form.formacao);
+        // Salva sessão para 30 minutos
+        localStorage.setItem(
+          "gt3_session",
+          JSON.stringify({ userData: data, timestamp: Date.now(), curso: form.formacao })
+        );
       } else {
         alert(data.error);
       }
@@ -177,7 +238,6 @@ export default function App() {
           setModalOpen(false);
           setFeedback({ nota: 0, revisao: "" });
         }
-        // Recarrega o histórico após registrar para atualizar a tabela na hora
         carregarHistorico();
       } else {
         const errorData = await res.json();
@@ -303,7 +363,7 @@ export default function App() {
             >
               {isDarkMode ? "☀️" : "🌙"}
             </button>
-            <button className="btn-secondary" onClick={() => setUser(null)}>
+            <button className="btn-secondary" onClick={handleLogout}>
               Sair
             </button>
           </div>
@@ -323,7 +383,12 @@ export default function App() {
                 marginBottom: "20px",
               }}
             >
-              <h2>Relatório de Presenças por Turma</h2>
+              <div>
+                <h2>Relatório de Presenças por Turma</h2>
+                <div style={{fontSize:'0.9rem', marginTop:'10px', opacity: 0.8}}>
+                  <strong>Turma Atual:</strong> {resumoAdmin.totalPresencas} Presenças | {resumoAdmin.totalFaltas} Faltas
+                </div>
+              </div>
               <button
                 className="btn-save"
                 onClick={exportarExcel}
@@ -451,7 +516,7 @@ export default function App() {
                       color: "var(--accent)",
                     }}
                   >
-                    {totalDiasPresentes}
+                    {estatisticasIndividuais.presencas}
                   </strong>
                   <small>Presenças</small>
                 </div>
@@ -473,9 +538,9 @@ export default function App() {
                       color: "#ef4444",
                     }}
                   >
-                    {TOTAL_AULAS - totalDiasPresentes}
+                    {estatisticasIndividuais.faltas}
                   </strong>
-                  <small>Faltas</small>
+                  <small>Faltas Reais</small>
                 </div>
               </div>
               {user.role !== "admin" && (

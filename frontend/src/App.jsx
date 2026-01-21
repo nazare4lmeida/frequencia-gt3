@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
 
-// Configuração de URL dinâmica: usa localhost para testes e /api para a Vercel
 const API_URL = window.location.hostname === "localhost" 
   ? "http://localhost:3001" 
-  : "/api";
+  : "/api"; // 
 
 const FORMACOES = [
   { id: 'fullstack', nome: 'Fullstack Developer', tag: 'WEB' },

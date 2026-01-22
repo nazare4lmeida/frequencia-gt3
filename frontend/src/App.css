@@ -37,26 +37,57 @@ body.dark {
   background-color: var(--bg-deep);
 }
 
-/* Ajuste para Modo Claro */
+/* Ajuste para Modo Claro - Clean & Professional */
 body:not(.dark) {
-  --bg-deep: #ffffffe0;
-  --card-bg: #f1f5f9e8;
-  --text-main: #0f172a;
-  --text-dim: #64748b;
-  --border-subtle: rgba(0, 0, 0, 0.1);
+  /* Fundo da página levemente acinzentado para destacar os cards brancos */
+  --bg-deep: #f8fafc;        
+  --card-bg: #ffffff;        
+  --text-main: #1e293b;      
+  --text-dim: #64748b;       
+  --border-subtle: #e2e8f0;  
+  
+  /* Cor de destaque para botões e links no modo claro (Teal/Verde Água) */
+  --accent-primary: #0d9488; 
 }
 
-/* Garantir que o header e os cards fiquem visíveis no modo claro */
+/* Header com efeito de vidro (Glassmorphism) */
 body:not(.dark) .glass-header {
-  background: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px); /* Efeito jateado moderno */
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
+/* Cards com Sombra Suave e Profundidade */
 body:not(.dark) .shadow-card,
 body:not(.dark) .stat-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 4px 12px rgba(240, 237, 237, 0.772);
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  
+  /* Sombra de duas camadas: uma para contorno e outra para profundidade */
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.1), 
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efeito de elevação ao passar o mouse */
+body:not(.dark) .shadow-card:hover,
+body:not(.dark) .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(148, 163, 184, 0.15);
+  border-color: #cbd5e1;
+}
+
+/* Ajuste opcional: se você tiver inputs ou badges */
+body:not(.dark) input, 
+body:not(.dark) select {
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #111827;
 }
 
 /* ================================================= */

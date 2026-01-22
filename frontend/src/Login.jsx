@@ -37,7 +37,7 @@ export default function Login({
 
         {dadosSalvos ? (
           <div className="welcome-back">
-            <p>● Bem-vindo(a) de volta,</p>
+            <p>● Bem-vindo(a) de volta,{' '}</p>
             {/* Correção: Se o nome não existir, mostra o email para não ficar vazio */}
             <div className="user-name-badge">{dadosSalvos.nome || dadosSalvos.email}</div>
             <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>

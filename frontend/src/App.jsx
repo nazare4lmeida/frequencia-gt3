@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import "./App.css";
 import { API_URL } from "./Constants";
 import Login from "./Login";
+import Admin from "./Admin"; 
+import Perfil from "./Perfil"; 
 
 // Funções para o Calendário de Segundas-feiras
 const getProximasSegundas = (formacao) => {
@@ -39,6 +41,7 @@ export default function App() {
     return salvo ? JSON.parse(salvo) : null;
   });
 
+  const [view, setView] = useState("home"); 
   const [form, setForm] = useState(dadosSalvos || { email: "", dataNasc: "" });
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
@@ -48,15 +51,12 @@ export default function App() {
     modal: false,
   });
 
-  // Alteração: Inicia o tema com base na preferência salva ou padrão dark
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const salvo = localStorage.getItem("gt3_theme");
     return salvo ? JSON.parse(salvo) : true;
   });
 
-  const [alarmeAtivo, setAlarmeAtivo] = useState(false);
-
-  // Inclusão: Estado para o relógio em tempo real
+  // Removido alarmeAtivo e setAlarmeAtivo para limpar erros de variáveis não utilizadas
   const [currentTime, setCurrentTime] = useState(
     new Date().toLocaleTimeString("pt-BR", {
       hour: "2-digit",
@@ -64,7 +64,6 @@ export default function App() {
     }),
   );
 
-  // Inclusão: Efeito para atualizar o relógio
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(
@@ -83,7 +82,7 @@ export default function App() {
   };
 
   const carregarHistorico = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id || user.role === "admin") return;
     try {
       const res = await fetch(`${API_URL}/historico/aluno/${user.id}`);
       if (res.ok) {
@@ -96,10 +95,12 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      Promise.resolve().then(() => carregarHistorico());
+    if (user?.id) {
+      Promise.resolve().then(() => {
+        carregarHistorico();
+      });
     }
-  }, [user, carregarHistorico]);
+  }, [user?.id, carregarHistorico]);
 
   const handleLogin = async () => {
     try {
@@ -154,20 +155,6 @@ export default function App() {
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const agora = new Date();
-      if (
-        (agora.getHours() === 17 || agora.getHours() === 21) &&
-        agora.getMinutes() === 55
-      ) {
-        setAlarmeAtivo(true);
-      }
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Alteração: Salva a preferência de tema no localStorage e alterna a classe do body
-  useEffect(() => {
     document.body.classList.toggle("dark", isDarkMode);
     localStorage.setItem("gt3_theme", JSON.stringify(isDarkMode));
   }, [isDarkMode]);
@@ -196,14 +183,9 @@ export default function App() {
       {popup.show && (
         <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>
       )}
-      {alarmeAtivo && (
-        <div className="alarme-box animate-pulse-glow">
-          <p>⏰ 5 minutos para o ponto!</p>
-          <button onClick={() => setAlarmeAtivo(false)}>Ok</button>
-        </div>
-      )}
+      
       <header className="glass-header">
-        <div className="brand-logo">
+        <div className="brand-logo" onClick={() => setView("home")} style={{cursor: 'pointer'}}>
           <div className="logo-circle">GT 3.0</div>
           <div className="brand-text">
             Registro de Frequência
@@ -216,17 +198,12 @@ export default function App() {
         <div className="header-right">
           <span className="clock">🕒 {currentTime}</span>
           <div className="nav-actions">
-            <button
-              className="btn-action-circle"
-              title="Ver Histórico"
-              onClick={() =>
-                document
-                  .getElementById("historico-section")
-                  .scrollIntoView({ behavior: "smooth" })
-              }
-            >
-              📊
-            </button>
+            {user.role === "admin" && (
+              <button className="btn-secondary" onClick={() => setView(view === "admin" ? "home" : "admin")}>
+                {view === "admin" ? "Início" : "Painel Admin"}
+              </button>
+            )}
+            <button className="btn-action-circle" onClick={() => setView("perfil")}>👤</button>
             <button
               className="btn-action-circle"
               title="Alternar Tema"
@@ -246,127 +223,132 @@ export default function App() {
           </div>
         </div>
       </header>
-      <main className="content-grid">
-        <div className="aula-card shadow-card">
-          <div className="card-header-info">
-            <p className="text-muted">
-              {new Date().toLocaleDateString("pt-BR")}
-            </p>
-            <h2 className="text-teal-modern">Olá, {user.nome}!</h2>
-          </div>
 
-          <div className="info-banner">
-            ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
-            segunda-feira.
-          </div>
+      {view === "admin" && user.role === "admin" ? (
+        <Admin />
+      ) : view === "perfil" ? (
+        <Perfil user={user} setUser={setUser} onVoltar={() => setView("home")} />
+      ) : (
+        <main className="content-grid">
+          <div className="aula-card shadow-card">
+            <div className="card-header-info">
+              <p className="text-muted">
+                {new Date().toLocaleDateString("pt-BR")}
+              </p>
+              <h2 className="text-teal-modern">Olá, {user.nome}!</h2>
+            </div>
 
-          <div style={{ margin: "20px 0" }}>
-            {!pontoHoje?.check_in ? (
-              <button className="btn-ponto in" onClick={() => baterPonto()}>
-                CHECK-IN
-              </button>
-            ) : !pontoHoje?.check_out ? (
-              <button
-                className="btn-ponto out"
-                onClick={() => setFeedback({ ...feedback, modal: true })}
-              >
-                CHECK-OUT
-              </button>
-            ) : (
-              <div className="ponto-concluido">✔ Presença confirmada</div>
-            )}
-          </div>
-          <p className="usability-info">
-            Seu registro será processado de acordo com o horário do servidor
-            (Brasília). Certifique-se de realizar o check-out ao final da aula
-            para validar sua participação.
-          </p>
-        </div>
+            <div className="info-banner">
+              ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
+              segunda-feira.
+            </div>
 
-        <div className="stats-grid">
-          <div className="stat-card">
-            <span className="stat-label">Total de Presenças</span>
-            <div className="stat-value">{totalPresencas}</div>
-          </div>
-
-          <div
-            className="stat-card"
-            style={{ marginTop: "12px", textAlign: "left" }}
-          >
-            <span className="stat-label">📅 Próximas Aulas (Segundas)</span>
-            <ul
-              style={{
-                listStyle: "none",
-                padding: 0,
-                marginTop: "10px",
-                fontSize: "0.85rem",
-              }}
-            >
-              {getProximasSegundas(user.formacao).map((data, i) => (
-                <li
-                  key={i}
-                  style={{ marginBottom: "5px", color: "var(--teal-primary)" }}
+            <div style={{ margin: "20px 0", textAlign: 'center' }}>
+              {!pontoHoje?.check_in ? (
+                <button className="btn-ponto in" onClick={() => baterPonto()}>
+                  CHECK-IN
+                </button>
+              ) : !pontoHoje?.check_out ? (
+                <button
+                  className="btn-ponto out"
+                  onClick={() => setFeedback({ ...feedback, modal: true })}
                 >
-                  ● {data} — 19:00h
-                </li>
-              ))}
-            </ul>
+                  CHECK-OUT
+                </button>
+              ) : (
+                <div className="ponto-concluido">✔ Presença confirmada</div>
+              )}
+            </div>
+            <p className="usability-info">
+              Seu registro será processado de acordo com o horário do servidor
+              (Brasília). Certifique-se de realizar o check-out ao final da aula
+              para validar sua participação.
+            </p>
           </div>
 
-          <div className="stat-card">
-            <span className="stat-label">Total de Faltas</span>
-            <div className="stat-value faltas">{totalFaltas}</div>
-          </div>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-label">Total de Presenças</span>
+              <div className="stat-value">{totalPresencas}</div>
+            </div>
 
-          <div className="stat-card">
-            <span className="stat-label">Status da Sessão</span>
             <div
-              className="stat-value text-success"
-              style={{ fontSize: "1.2rem" }}
+              className="stat-card"
+              style={{ marginTop: "12px", textAlign: "left" }}
             >
-              Ativa
+              <span className="stat-label">📅 Próximas Aulas (Segundas)</span>
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  marginTop: "10px",
+                  fontSize: "0.85rem",
+                }}
+              >
+                {getProximasSegundas(user.formacao).map((data, i) => (
+                  <li
+                    key={i}
+                    style={{ marginBottom: "5px", color: "var(--teal-primary)" }}
+                  >
+                    ● {data} — 19:00h
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-label">Total de Faltas</span>
+              <div className="stat-value faltas">{totalFaltas}</div>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-label">Status da Sessão</span>
+              <div
+                className="stat-value text-success"
+                style={{ fontSize: "1.2rem" }}
+              >
+                Ativa
+              </div>
             </div>
           </div>
-        </div>
 
-        <div id="historico-section" className="historico-container shadow-card">
-          <div className="flex justify-between items-center mb-4">
+          <div id="historico-section" className="historico-container shadow-card">
             <h3>Meu Histórico Completo</h3>
-          </div>
-          <div className="table-responsive">
-            <table className="historico-table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Entrada</th>
-                  <th>Saída</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historico.length === 0 ? (
+            <div className="table-responsive">
+              <table className="historico-table">
+                <thead>
                   <tr>
-                    <td colSpan="3" className="text-center text-muted">
-                      Nenhum registro encontrado.
-                    </td>
+                    <th>Data</th>
+                    <th>Entrada</th>
+                    <th>Saída</th>
                   </tr>
-                ) : (
-                  historico.map((h, i) => (
-                    <tr key={i}>
-                      <td>
-                        {new Date(h.data).toLocaleDateString("pt-BR", {
-                          timeZone: "UTC",
-                        })}
+                </thead>
+                <tbody>
+                  {historico.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" style={{textAlign: 'center', color: 'var(--text-dim)'}}>
+                        Nenhum registro encontrado.
                       </td>
-                      <td>{h.check_in || "--:--"}</td>
-                      <td>{h.check_out || "--:--"}</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    historico.map((h, i) => (
+                      <tr key={i}>
+                        <td>
+                          {new Date(h.data).toLocaleDateString("pt-BR", {
+                            timeZone: "UTC",
+                          })}
+                        </td>
+                        <td>{h.check_in || "--:--"}</td>
+                        <td>{h.check_out || "--:--"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      )}
 
       {feedback.modal && (
         <div className="modal-overlay">

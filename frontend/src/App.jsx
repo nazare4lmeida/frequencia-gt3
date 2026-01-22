@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./App.css";
-import "./index.css";
 import { API_URL } from "./Constants";
 import Login from "./Login";
 
@@ -10,7 +9,8 @@ export default function App() {
     if (!s) return null;
     try {
       const { userData, timestamp } = JSON.parse(s);
-      if (Date.now() - timestamp < 30 * 60 * 1000) return userData;
+      // Sessão de 12 horas para facilitar para os alunos
+      if (Date.now() - timestamp < 12 * 60 * 60 * 1000) return userData;
     } catch (err) {
       console.error(err);
     }
@@ -25,11 +25,7 @@ export default function App() {
   const [form, setForm] = useState(dadosSalvos || { email: "", dataNasc: "" });
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
-  const [feedback, setFeedback] = useState({
-    nota: 0,
-    revisao: "",
-    modal: false,
-  });
+  const [feedback, setFeedback] = useState({ nota: 0, revisao: "", modal: false });
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [alarmeAtivo, setAlarmeAtivo] = useState(false);
 
@@ -38,19 +34,25 @@ export default function App() {
     setTimeout(() => setPopup({ show: false, msg: "", tipo: "" }), 5000);
   };
 
-  // 🔹 CARREGAR HISTÓRICO
-  const carregarHistorico = React.useCallback(async () => {
+  const carregarHistorico = useCallback(async () => {
     if (!user?.id) return;
     try {
       const res = await fetch(`${API_URL}/historico/aluno/${user.id}`);
-      const data = await res.json();
-      if (res.ok) setHistorico(data);
+      if (res.ok) {
+        const data = await res.json();
+        setHistorico(data);
+      }
     } catch {
       exibirPopup("Erro ao carregar histórico", "erro");
     }
-  }, [user]); // Alterado de [user?.id] para [user] para satisfazer o compilador
+  }, [user]);
 
-  // 🔹 LOGIN
+  useEffect(() => {
+    if (user) {
+      Promise.resolve().then(() => carregarHistorico());
+    }
+  }, [user, carregarHistorico]);
+
   const handleLogin = async () => {
     try {
       const res = await fetch(`${API_URL}/login`, {
@@ -70,7 +72,8 @@ export default function App() {
       }
 
       setUser(data);
-      localStorage.setItem("gt3_remember", JSON.stringify(data));
+      // Salva apenas os dados básicos para o "lembrar"
+      localStorage.setItem("gt3_remember", JSON.stringify({ email: data.email, dataNasc: data.data_nascimento }));
       localStorage.setItem(
         "gt3_session",
         JSON.stringify({ userData: data, timestamp: Date.now() }),
@@ -80,7 +83,6 @@ export default function App() {
     }
   };
 
-  // 🔹 REGISTRAR PONTO
   const baterPonto = async (extra = {}) => {
     try {
       const res = await fetch(`${API_URL}/ponto`, {
@@ -101,26 +103,19 @@ export default function App() {
 
       exibirPopup(data.msg, "sucesso");
       setFeedback({ nota: 0, revisao: "", modal: false });
-      
-      // Atualiza o histórico após bater o ponto
       carregarHistorico();
     } catch {
       exibirPopup("Erro ao registrar ponto", "erro");
     }
   };
 
-  // 🔹 ALARME
   useEffect(() => {
     const interval = setInterval(() => {
       const agora = new Date();
-      if (
-        (agora.getHours() === 17 || agora.getHours() === 21) &&
-        agora.getMinutes() === 55
-      ) {
+      if ((agora.getHours() === 17 || agora.getHours() === 21) && agora.getMinutes() === 55) {
         setAlarmeAtivo(true);
       }
     }, 60000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -131,102 +126,84 @@ export default function App() {
   if (!user) {
     return (
       <Login
-        form={form}
-        setForm={setForm}
+        form={form} setForm={setForm}
         handleLogin={handleLogin}
-        dadosSalvos={dadosSalvos}
-        setDadosSalvos={setDadosSalvos}
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
+        dadosSalvos={dadosSalvos} setDadosSalvos={setDadosSalvos}
+        isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode}
       />
     );
   }
 
-  const hoje = new Date().toISOString().split("T")[0];
-  const pontoHoje = historico.find((h) => h.data === hoje);
+  const hoje = new Date().toLocaleDateString('en-CA'); // Pega YYYY-MM-DD local
+  const pontoHoje = historico.find((h) => h.data.split('T')[0] === hoje);
 
   return (
     <div className="app-wrapper">
-      {popup.show && (
-        <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>
-      )}
+      {popup.show && <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>}
 
       {alarmeAtivo && (
-        <div className="alarme-box">
+        <div className="alarme-box animate-pulse-glow">
           <p>⏰ 5 minutos para o ponto!</p>
           <button onClick={() => setAlarmeAtivo(false)}>Ok</button>
         </div>
       )}
 
-      <header>
+      <header className="glass-header">
         <div className="brand">
           <h1>GT <span>3.0</span></h1>
         </div>
-        <button
-          className="btn-secondary"
-          onClick={() => {
-            localStorage.clear();
-            setUser(null);
-          }}
-        >
+        <button className="btn-secondary" onClick={() => { localStorage.removeItem("gt3_session"); setUser(null); }}>
           Sair
         </button>
       </header>
 
       <main className="content-grid">
-        <div className="aula-card">
-          <p>{new Date().toLocaleDateString("pt-BR")}</p>
-
-          {!pontoHoje?.check_in ? (
-            <button className="btn-ponto in" onClick={() => baterPonto()}>
-              CHECK-IN
-            </button>
-          ) : !pontoHoje?.check_out ? (
-            <button className="btn-ponto out" onClick={() => setFeedback({ ...feedback, modal: true })}>
-              CHECK-OUT
-            </button>
-          ) : (
-            <div className="ponto-concluido">✔ Presença confirmada</div>
-          )}
+        <div className="aula-card shadow-card">
+          <p className="text-muted-foreground">{new Date().toLocaleDateString("pt-BR")}</p>
+          <div style={{ margin: "20px 0" }}>
+            {!pontoHoje?.check_in ? (
+              <button className="btn-ponto in" onClick={() => baterPonto()}>CHECK-IN</button>
+            ) : !pontoHoje?.check_out ? (
+              <button className="btn-ponto out" onClick={() => setFeedback({ ...feedback, modal: true })}>CHECK-OUT</button>
+            ) : (
+              <div className="ponto-concluido">✔ Presença confirmada</div>
+            )}
+          </div>
         </div>
 
-        <div className="historico-container">
+        <div className="historico-container glass shadow-card">
           <h3 style={{ marginBottom: "15px" }}>Meu Histórico</h3>
-          <table className="historico-table">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Entrada</th>
-                <th>Saída</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historico.map((h, i) => (
-                <tr key={i}>
-                  <td>{new Date(h.data).toLocaleDateString("pt-BR")}</td>
-                  <td>{h.check_in || "--:--"}</td>
-                  <td>{h.check_out || "--:--"}</td>
+          <div className="table-responsive">
+            <table className="historico-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Entrada</th>
+                  <th>Saída</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {historico.map((h, i) => (
+                  <tr key={i}>
+                    <td>{new Date(h.data).toLocaleDateString("pt-BR", { timeZone: 'UTC' })}</td>
+                    <td>{h.check_in || "--:--"}</td>
+                    <td>{h.check_out || "--:--"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </main>
 
       {feedback.modal && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content glass shadow-xl">
             <h3>Finalizar Check-out</h3>
             <p>Avalie a aula de hoje:</p>
-            <div className="rating-group" style={{ display: "flex", gap: "10px", margin: "15px 0" }}>
+            <div className="rating-group" style={{ display: "flex", gap: "10px", margin: "15px 0", justifyContent: "center" }}>
               {[1, 2, 3, 4, 5].map((n) => (
-                <button 
-                  key={n} 
-                  className={feedback.nota === n ? "active" : ""} 
-                  onClick={() => setFeedback({ ...feedback, nota: n })}
-                >
-                  {n}
-                </button>
+                <button key={n} className={feedback.nota === n ? "active" : ""} onClick={() => setFeedback({ ...feedback, nota: n })}>{n}</button>
               ))}
             </div>
             <textarea
@@ -235,19 +212,9 @@ export default function App() {
               value={feedback.revisao}
               onChange={(e) => setFeedback({ ...feedback, revisao: e.target.value })}
             />
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button 
-                className="btn-primary" 
-                onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}
-              >
-                Confirmar Saída
-              </button>
-              <button 
-                className="btn-secondary" 
-                onClick={() => setFeedback({ ...feedback, modal: false })}
-              >
-                Cancelar
-              </button>
+            <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+              <button className="btn-primary" onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}>Confirmar</button>
+              <button className="btn-secondary" onClick={() => setFeedback({ ...feedback, modal: false })}>Cancelar</button>
             </div>
           </div>
         </div>

@@ -11,8 +11,8 @@ export default function App() {
       const { userData, timestamp } = JSON.parse(s);
       if (Date.now() - timestamp < 30 * 60 * 1000) return userData;
     } catch (err) {
-  console.error(err);
-}
+      console.error(err);
+    }
     return null;
   });
 
@@ -24,7 +24,11 @@ export default function App() {
   const [form, setForm] = useState(dadosSalvos || { email: "", dataNasc: "" });
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
-  const [feedback, setFeedback] = useState({ nota: 0, revisao: "", modal: false });
+  const [feedback, setFeedback] = useState({
+    nota: 0,
+    revisao: "",
+    modal: false,
+  });
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [alarmeAtivo, setAlarmeAtivo] = useState(false);
 
@@ -32,6 +36,18 @@ export default function App() {
     setPopup({ show: true, msg, tipo });
     setTimeout(() => setPopup({ show: false, msg: "", tipo: "" }), 5000);
   };
+
+  // 🔹 CARREGAR HISTÓRICO
+  const carregarHistorico = React.useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`${API_URL}/historico/aluno/${user.id}`);
+      const data = await res.json();
+      if (res.ok) setHistorico(data);
+    } catch {
+      exibirPopup("Erro ao carregar histórico", "erro");
+    }
+  }, [user]); // Alterado de [user?.id] para [user] para satisfazer o compilador
 
   // 🔹 LOGIN
   const handleLogin = async () => {
@@ -56,29 +72,12 @@ export default function App() {
       localStorage.setItem("gt3_remember", JSON.stringify(data));
       localStorage.setItem(
         "gt3_session",
-        JSON.stringify({ userData: data, timestamp: Date.now() })
+        JSON.stringify({ userData: data, timestamp: Date.now() }),
       );
     } catch {
       exibirPopup("Erro de conexão com o servidor", "erro");
     }
   };
-
-  // 🔹 CARREGAR HISTÓRICO
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const carregarHistorico = async () => {
-      try {
-        const res = await fetch(`${API_URL}/historico/aluno/${user.id}`);
-        const data = await res.json();
-        if (res.ok) setHistorico(data);
-      } catch {
-        exibirPopup("Erro ao carregar histórico", "erro");
-      }
-    };
-
-    carregarHistorico();
-  }, [user?.id]);
 
   // 🔹 REGISTRAR PONTO
   const baterPonto = async (extra = {}) => {
@@ -100,7 +99,10 @@ export default function App() {
       }
 
       exibirPopup(data.msg, "sucesso");
-      setFeedback((p) => ({ ...p, modal: false }));
+      setFeedback({ nota: 0, revisao: "", modal: false });
+      
+      // Atualiza o histórico após bater o ponto
+      carregarHistorico();
     } catch {
       exibirPopup("Erro ao registrar ponto", "erro");
     }
@@ -144,7 +146,9 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
-      {popup.show && <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>}
+      {popup.show && (
+        <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>
+      )}
 
       {alarmeAtivo && (
         <div className="alarme-box">
@@ -154,7 +158,9 @@ export default function App() {
       )}
 
       <header>
-        <h1>GT <span>3.0</span></h1>
+        <div className="brand">
+          <h1>GT <span>3.0</span></h1>
+        </div>
         <button
           className="btn-secondary"
           onClick={() => {
@@ -182,7 +188,69 @@ export default function App() {
             <div className="ponto-concluido">✔ Presença confirmada</div>
           )}
         </div>
+
+        <div className="historico-container">
+          <h3 style={{ marginBottom: "15px" }}>Meu Histórico</h3>
+          <table className="historico-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Entrada</th>
+                <th>Saída</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historico.map((h, i) => (
+                <tr key={i}>
+                  <td>{new Date(h.data).toLocaleDateString("pt-BR")}</td>
+                  <td>{h.check_in || "--:--"}</td>
+                  <td>{h.check_out || "--:--"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </main>
+
+      {feedback.modal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Finalizar Check-out</h3>
+            <p>Avalie a aula de hoje:</p>
+            <div className="rating-group" style={{ display: "flex", gap: "10px", margin: "15px 0" }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button 
+                  key={n} 
+                  className={feedback.nota === n ? "active" : ""} 
+                  onClick={() => setFeedback({ ...feedback, nota: n })}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <textarea
+              className="input-notes"
+              placeholder="O que achou da aula? (opcional)"
+              value={feedback.revisao}
+              onChange={(e) => setFeedback({ ...feedback, revisao: e.target.value })}
+            />
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button 
+                className="btn-primary" 
+                onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}
+              >
+                Confirmar Saída
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={() => setFeedback({ ...feedback, modal: false })}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

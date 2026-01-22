@@ -1,987 +1,225 @@
 /* =========================================================
-
-   IMPORTAÇÃO E VARIÁVEIS
-
+   VARIÁVEIS E BASE
    ========================================================= */
-
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap");
 
 :root {
   --bg: #f8faff;
-
   --header-bg: rgba(255, 255, 255, 0.85);
-
   --card: #ffffff;
-
   --text-main: #0f172a;
-
   --text-muted: #64748b;
-
   --accent: #0b635b;
-
   --accent-hover: #0f766e;
-
-  --accent-glow: rgba(13, 148, 136, 0.25);
-
+  --accent-glow: rgba(13, 148, 136, 0.15);
   --border: #e2e8f0;
-
   --radius-lg: 24px;
-
   --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
 }
 
 body.dark {
   --bg: #0f172a;
-
   --header-bg: rgba(15, 23, 42, 0.9);
-
   --card: #1e293b;
-
   --text-main: #f1f5f9;
-
   --text-muted: #759aaf;
-
   --accent: #146459;
-
   --border: #2c3747;
-
   --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
 }
 
-/* =========================================================
-
-   BASE
-
-   ========================================================= */
-
 body {
   margin: 0;
-
   font-family: "Plus Jakarta Sans", sans-serif;
-
   background-color: var(--bg);
-
   color: var(--text-main);
-
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
+/* =========================================================
+   LAYOUT E CONTEÚDO
+   ========================================================= */
 .app-wrapper {
   min-height: 100vh;
+  padding-bottom: 40px;
 }
-
-/* =========================================================
-
-   LOGIN
-
-   ========================================================= */
-
-.login-container {
-  height: 100vh;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  padding: 20px;
-
-  position: relative;
-}
-
-.theme-toggle {
-  position: absolute;
-
-  top: 20px;
-
-  right: 20px;
-}
-
-.login-card {
-  width: 100%;
-
-  max-width: 400px;
-
-  padding: 40px;
-
-  text-align: center;
-
-  background: var(--card);
-
-  border: 1px solid var(--border);
-
-  border-radius: var(--radius-lg);
-
-  box-shadow: var(--shadow);
-}
-
-#loginForm {
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 16px;
-
-  margin-top: 24px;
-}
-
-#loginForm input {
-  padding: 14px;
-
-  border-radius: 12px;
-
-  border: 1px solid var(--border);
-
-  background: var(--bg);
-
-  color: var(--text-main);
-
-  font-family: inherit;
-
-  outline: none;
-}
-
-/* =========================================================
-
-   HEADER & BRAND
-
-   ========================================================= */
 
 header {
   position: sticky;
-
   top: 0;
-
   z-index: 1000;
-
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   padding: 1rem 5%;
-
   background: var(--header-bg);
-
   backdrop-filter: blur(12px);
-
   border-bottom: 1px solid var(--border);
 }
-
-.brand {
-  display: flex;
-
-  align-items: center;
-
-  gap: 12px;
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.brand h1 span {
-  color: var(--accent);
-}
-
-.badge {
-  padding: 4px 12px;
-
-  font-size: 0.7rem;
-
-  border-radius: 20px;
-
-  background: var(--accent-glow);
-
-  color: var(--accent);
-
-  font-weight: 700;
-
-  text-transform: uppercase;
-}
-
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.nav-actions select {
-  padding: 8px;
-
-  border-radius: 10px;
-
-  background: var(--bg);
-
-  color: var(--text-main);
-
-  border: 1px solid var(--border);
-}
-
-.tool-group {
-  display: flex;
-  gap: 8px;
-}
-
-/* =========================================================
-
-   CARDS & AULA
-
-   ========================================================= */
 
 .content-grid {
-  max-width: 900px; /* Leve aumento para tabelas admin */
-
+  max-width: 800px;
   margin: 40px auto;
-
   padding: 0 20px;
-}
-
-.aula {
-  background: var(--card);
-
-  border: 1px solid var(--border);
-
-  border-radius: var(--radius-lg);
-
-  padding: 32px;
-
-  margin-bottom: 24px;
-
-  box-shadow: var(--shadow);
-
-  position: relative;
-}
-
-.aula-header {
-  margin-bottom: 35px;
-}
-
-.aula-header small {
-  color: var(--accent);
-
-  font-weight: 700;
-
-  text-transform: uppercase;
-
-  font-size: 0.75rem;
-}
-
-.aula-header h3 {
-  margin: 8px 0;
-  font-size: 1.5rem;
-}
-
-.data-tag {
-  font-size: 0.8rem;
-
-  color: var(--accent);
-
-  background: var(--accent-glow);
-
-  padding: 8px 16px;
-
-  border-radius: 20px;
-
-  font-weight: 700;
-
-  text-transform: uppercase;
-
-  display: inline-block;
-
-  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 /* =========================================================
-
-   BOTÕES & AÇÕES
-
+   CARD DE PONTO (MODERNO)
    ========================================================= */
-
-.aula-actions {
-  display: flex;
-
-  gap: 20px;
-}
-
-.btn-primary,
-.btn-save {
-  padding: 14px 24px;
-
-  background: var(--accent);
-
-  color: white;
-
-  border: none;
-
-  border-radius: 12px;
-
-  font-weight: 700;
-
-  cursor: pointer;
-
-  text-transform: uppercase;
-
-  transition: all 0.3s ease;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-}
-
-.btn-primary:hover {
-  background: var(--accent-hover);
-
-  box-shadow: 0 4px 12px var(--accent-glow);
-}
-
-.btn-checkout {
-  background: transparent !important;
-
-  color: var(--text-main) !important;
-
-  border: 1px solid var(--border) !important;
-}
-
-.btn-checkout:hover {
-  border-color: var(--accent) !important;
-
-  background: var(--accent-glow) !important;
-}
-
-.btn-secondary {
-  padding: 8px 16px;
-
-  background: var(--card);
-
-  border: 1px solid var(--border);
-
-  color: var(--text-main);
-
-  border-radius: 10px;
-
-  cursor: pointer;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  font-weight: 600;
-}
-
-/* =========================================================
-
-   MODAL & RATING
-
-   ========================================================= */
-
-.modal-overlay {
-  position: fixed;
-
-  inset: 0;
-
-  background: rgba(0, 0, 0, 0.7);
-
-  backdrop-filter: blur(4px);
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  z-index: 2000;
-}
-
-.modal-content {
-  width: 90%;
-
-  max-width: 450px;
-
-  position: relative;
-
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.close-modal {
-  position: absolute;
-
-  top: 20px;
-
-  right: 20px;
-
-  background: none;
-
-  border: none;
-
-  font-size: 1.5rem;
-
-  color: var(--text-muted);
-
-  cursor: pointer;
-}
-
-.rating-group {
-  display: flex;
-  gap: 8px;
-}
-
-.input-notes {
-  width: 100%;
-
-  min-height: 120px;
-
-  margin: 20px 0;
-
-  padding: 15px;
-
-  border-radius: 12px;
-
-  border: 1px solid var(--border);
-
-  background: var(--bg);
-
-  color: var(--text-main);
-
-  font-family: inherit;
-
-  resize: none;
-
-  box-sizing: border-box;
-}
-
-/* =========================================================
-
-   ESTATÍSTICAS & HISTÓRICO
-
-   ========================================================= */
-
-.perfil-info {
-  background: var(--card);
-
-  padding: 24px;
-
-  border-radius: var(--radius-lg);
-
-  margin-bottom: 24px;
-
-  border: 1px solid var(--border);
-}
-
-.stats-container {
-  display: flex;
-
-  gap: 16px;
-
-  margin-top: 15px;
-}
-
-.stat-card {
-  flex: 1;
-
-  background: var(--bg);
-
-  padding: 16px;
-
-  border-radius: 16px;
-
-  border: 1px solid var(--border);
-
-  text-align: center;
-
-  font-size: 0.95rem;
-
-  color: var(--text-main);
-}
-
-.stat-card strong {
-  color: var(--accent);
-
-  font-size: 1.1rem;
-
-  display: block;
-
-  margin-bottom: 4px;
-}
-
-.historico-table {
-  width: 100%;
-
-  border-collapse: collapse;
-
-  background: var(--card);
-
-  border-radius: 16px;
-
-  overflow: hidden;
-
-  box-shadow: var(--shadow);
-
-  font-size: 0.9rem;
-}
-
-.historico-table th,
-.historico-table td {
-  padding: 16px;
-
-  text-align: left;
-
-  border-bottom: 1px solid var(--border);
-}
-
-.historico-table th {
-  background: var(--accent-glow);
-
-  color: var(--accent);
-
-  text-transform: uppercase;
-
-  font-size: 0.7rem;
-
-  font-weight: 800;
-
-  letter-spacing: 0.5px;
-}
-
-.historico-table tr:last-child td {
-  border-bottom: none;
-}
-
-.select-box {
-  margin-bottom: 24px;
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 12px;
-
-  flex-wrap: wrap;
-}
-
-.select-box select,
-.select-box input {
-  padding: 10px 14px;
-
-  border-radius: 10px;
-
-  background: var(--card);
-
-  color: var(--text-main);
-
-  border: 1px solid var(--border);
-
-  font-family: inherit;
-
-  outline: none;
-}
-
-/* =========================================================
-
-   ADMIN DASHBOARD EXTRAS
-
-   ========================================================= */
-
-.admin-container {
-  background: var(--card);
-
-  padding: 32px;
-
-  border-radius: var(--radius-lg);
-
-  border: 1px solid var(--border);
-
-  box-shadow: var(--shadow);
-
-  margin-top: 24px;
-}
-
-.admin-header-box {
-  display: flex;
-
-  justify-content: space-between;
-
-  align-items: center;
-
-  margin-bottom: 24px;
-
-  gap: 20px;
-
-  flex-wrap: wrap;
-}
-
-.admin-actions {
-  display: flex;
-
-  gap: 12px;
-
-  align-items: center;
-}
-
-.btn-save {
-  background: #10b981; /* Verde esmeralda para exportação */
-
-  color: white;
-
-  border: none;
-
-  padding: 10px 20px;
-
-  border-radius: 10px;
-
-  cursor: pointer;
-
-  font-weight: 700;
-
-  transition: all 0.3s ease;
-
-  font-size: 0.85rem;
-}
-
-.btn-save:hover {
-  background: #059669;
-
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-
-  transform: translateY(-1px);
-}
-
-/* Status de falta no relatório admin */
-
-.status-falta {
-  color: #ef4444;
-  font-weight: 600;
-}
-
-.status-presente {
-  color: #10b981;
-  font-weight: 600;
-}
-
-/* POPUP ESTILIZADO */
-
-.custom-popup {
-  position: fixed;
-
-  top: 20px;
-
-  right: 20px;
-
-  padding: 15px 25px;
-
-  border-radius: 12px;
-
-  color: white;
-
-  font-weight: bold;
-
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-
-  z-index: 9999;
-
-  animation: slideIn 0.3s ease-out;
-}
-
-.sucesso {
-  background: #0a4d26;
-}
-
-.erro {
-  background: #8d1002b4;
-}
-
-.aviso {
-  background: #320b56;
-  color: #000;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.btn-ponto {
-  width: 100%;
-
-  padding: 20px;
-
-  font-size: 1.2rem;
-
-  font-weight: 800;
-
-  border-radius: 15px;
-
-  cursor: pointer;
-
-  border: none;
-
-  transition: 0.3s;
-}
-
-.btn-ponto.in {
-  background: #27ae60;
-  color: white;
-}
-
-.btn-ponto.out {
-  background: #f39c12;
-  color: white;
-}
-
-.alarme-box {
-  position: fixed;
-
-  bottom: 20px;
-
-  left: 20px;
-
-  background: #f1c40f;
-
-  padding: 15px;
-
-  border-radius: 10px;
-
-  z-index: 1000;
-
-  display: flex;
-
-  gap: 10px;
-
-  align-items: center;
-
-  color: black;
-
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.custom-popup {
-  position: fixed;
-
-  top: 20px;
-
-  right: 20px;
-
-  padding: 15px 30px;
-
-  border-radius: 8px;
-
-  z-index: 2000;
-
-  font-weight: 600;
-
-  animation: slideIn 0.3s forwards;
-}
-
-.custom-popup.erro {
-  background: #e74c3c;
-  color: white;
-}
-
-.custom-popup.sucesso {
-  background: #2ecc71;
-  color: white;
-}
-
-/* =========================================================
-   NOVAS FUNCIONALIDADES (APENAS ACRÉSCIMOS)
-   ========================================================= */
-
-/* Estilo para o botão único de ponto que alterna cores */
-.btn-ponto {
-    width: 100%;
-    padding: 20px;
-    font-size: 1.1rem;
-    font-weight: 800;
-    border-radius: 15px;
-    cursor: pointer;
-    border: none;
-    margin-top: 20px;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
-}
-/* Verde para entrada */
-.btn-ponto.in { 
-    background: #10b981; 
-    color: white; 
-}
-/* Laranja/Amarelo para saída */
-.btn-ponto.out { 
-    background: #f59e0b; 
-    color: white; 
-}
-.btn-ponto:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
-}
-
-/* Caixa do Alarme flutuante */
-.alarme-box {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #f1c40f;
-    padding: 12px 20px;
-    border-radius: 50px;
-    z-index: 10000;
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    color: #000;
-    font-weight: 700;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-}
-
-.alarme-box button {
-    background: #000;
-    color: #fff;
-    border: none;
-    padding: 5px 12px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.75rem;
-}
-
-/* Ajuste para as notas (estrelas/números) ficarem destacadas quando clicadas */
-.rating-group button.active {
-    background: var(--accent) !important;
-    color: white !important;
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 15px var(--accent-glow);
-}
-
-/* Estilo para quando o ponto já foi totalmente concluído */
-.ponto-concluido {
-    margin-top: 20px;
-    padding: 15px;
-    background: var(--accent-glow);
-    color: var(--accent);
-    border-radius: 12px;
-    font-weight: 700;
-    text-align: center;
-    border: 1px dashed var(--accent);
-}
-
-
-/* =========================================================
-   AJUSTES DE ALINHAMENTO COM App.jsx (SEM REMOVER NADA)
-   ========================================================= */
-
-/* Wrapper geral do app */
-.app-wrapper {
-  padding-bottom: 60px;
-}
-
-/* Card principal de ponto (App.jsx usa aula-card) */
 .aula-card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 32px;
+  padding: 40px;
+  text-align: center;
   box-shadow: var(--shadow);
-  margin-bottom: 30px;
 }
 
-/* Conteúdo central melhor espaçado */
-.content-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
+.aula-card p {
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 20px;
 }
 
-/* Container do histórico */
+/* Botão de Ponto Ajustado */
+.btn-ponto {
+  width: 100%;
+  max-width: 300px; /* Impede que fique gigante */
+  padding: 16px 32px;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 14px;
+  cursor: pointer;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 0 auto;
+}
+
+.btn-ponto.in { background: #10b981; color: white; }
+.btn-ponto.out { background: #f59e0b; color: white; }
+
+.btn-ponto:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.1);
+  box-shadow: 0 8px 20px var(--accent-glow);
+}
+
+/* =========================================================
+   HISTÓRICO (CORREÇÃO DE VISIBILIDADE)
+   ========================================================= */
 .historico-container {
-  background: transparent;
+  margin-top: 20px;
+  display: block !important; /* Garante que apareça */
 }
 
-/* Modal precisa parecer um card */
-.modal-content {
+.historico-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--card);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.historico-table th {
+  background: var(--accent-glow);
+  color: var(--accent);
+  padding: 16px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.historico-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.historico-table tr:hover td {
+  background: var(--accent-glow);
+}
+
+/* =========================================================
+   LOGIN E COMPONENTES
+   ========================================================= */
+.login-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px;
   background: var(--card);
   border-radius: var(--radius-lg);
-  padding: 30px;
-  box-shadow: var(--shadow);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
-/* Textarea real usado no JSX */
-.modal-content textarea {
+input {
   width: 100%;
-  min-height: 100px;
-  margin: 15px 0;
-  padding: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-main);
-  font-family: inherit;
-  resize: none;
+  box-sizing: border-box;
 }
 
-/* Grupo de avaliação (1–5) */
-.rating-group button {
-  flex: 1;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--card);
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: 0.3s;
 }
 
-.rating-group button:hover {
-  background: var(--accent-glow);
-}
-
-/* Header botão sair */
-header .btn-secondary {
-  height: 38px;
-}
-
-/* Histórico mais legível */
-.historico-table tr:hover td {
-  background: var(--bg);
-}
-
-/* Popup – garantir prioridade correta */
+/* POPUPS */
 .custom-popup {
-  min-width: 260px;
-  text-align: center;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+  z-index: 2000;
+  animation: slideIn 0.3s ease-out;
 }
 
-.custom-popup.sucesso {
-  background: #16a34a;
+.custom-popup.sucesso { background: #10b981; }
+.custom-popup.erro { background: #ef4444; }
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-.custom-popup.erro {
-  background: #dc2626;
+/* Ponto Concluído */
+.ponto-concluido {
+    padding: 20px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border-radius: 12px;
+    font-weight: 700;
+    border: 2px dashed var(--accent);
 }
 
 /* Responsivo extra */

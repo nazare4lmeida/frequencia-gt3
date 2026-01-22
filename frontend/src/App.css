@@ -39,8 +39,8 @@ body.dark {
 
 /* Ajuste para Modo Claro */
 body:not(.dark) {
-  --bg-deep: #ffffff;
-  --card-bg: #f1f5f9;
+  --bg-deep: #ffffffe0;
+  --card-bg: #f1f5f9e8;
   --text-main: #0f172a;
   --text-dim: #64748b;
   --border-subtle: rgba(0, 0, 0, 0.1);

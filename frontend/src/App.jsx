@@ -25,7 +25,13 @@ export default function App() {
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
   const [feedback, setFeedback] = useState({ nota: 0, revisao: "", modal: false });
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  
+  // Alteração: Inicia o tema com base na preferência salva ou padrão dark
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const salvo = localStorage.getItem("gt3_theme");
+    return salvo ? JSON.parse(salvo) : true;
+  });
+
   const [alarmeAtivo, setAlarmeAtivo] = useState(false);
 
   // Inclusão: Estado para o relógio em tempo real
@@ -119,8 +125,10 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Alteração: Salva a preferência de tema no localStorage e alterna a classe do body
   useEffect(() => {
     document.body.classList.toggle("dark", isDarkMode);
+    localStorage.setItem("gt3_theme", JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
   if (!user) {
@@ -140,7 +148,6 @@ export default function App() {
   const hoje = new Date().toLocaleDateString("en-CA");
   const pontoHoje = historico.find((h) => h.data.split("T")[0] === hoje);
   const totalPresencas = historico.length;
-  // Exemplo de cálculo de faltas (ajuste conforme sua regra de negócio)
   const totalFaltas = 0; 
 
   return (
@@ -193,14 +200,13 @@ export default function App() {
             <h2 className="text-teal-modern">Olá, {user.nome}!</h2>
           </div>
 
-          {/* Inclusão: Banner Informativo sobre as aulas de segunda */}
           <div className="info-banner">
             ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de segunda-feira.
           </div>
 
           <div style={{ margin: "20px 0" }}>
             {!pontoHoje?.check_in ? (
-              <button className="btn-ponto in animate-pulse-glow" onClick={() => baterPonto()}>
+              <button className="btn-ponto in" onClick={() => baterPonto()}>
                 CHECK-IN
               </button>
             ) : !pontoHoje?.check_out ? (
@@ -223,7 +229,6 @@ export default function App() {
             <div className="stat-value">{totalPresencas}</div>
           </div>
           
-          {/* Inclusão: Bloco de Faltas */}
           <div className="stat-card">
             <span className="stat-label">Total de Faltas</span>
             <div className="stat-value faltas">{totalFaltas}</div>
@@ -237,7 +242,7 @@ export default function App() {
           </div>
         </div>
 
-        <div id="historico-section" className="historico-container glass shadow-card">
+        <div id="historico-section" className="historico-container shadow-card">
           <div className="flex justify-between items-center mb-4">
             <h3>Meu Histórico Completo</h3>
           </div>
@@ -274,7 +279,7 @@ export default function App() {
 
       {feedback.modal && (
         <div className="modal-overlay">
-          <div className="modal-content glass shadow-xl">
+          <div className="modal-content shadow-xl">
             <h3>Finalizar Check-out</h3>
             <p className="text-muted" style={{ marginBottom: "15px" }}>
               Como foi sua experiência na aula de hoje?
@@ -297,7 +302,7 @@ export default function App() {
               onChange={(e) => setFeedback({ ...feedback, revisao: e.target.value })}
             />
             <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
-              <button className="btn-primary" onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}>
+              <button className="btn-ponto in" onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}>
                 Confirmar Saída
               </button>
               <button className="btn-secondary" onClick={() => setFeedback({ ...feedback, modal: false })}>

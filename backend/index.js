@@ -6,13 +6,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Middleware para garantir que o Vercel trate as rotas /api
-app.use('/api', (req, res, next) => next());
-
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
+
+// Helper para pegar data e hora de Brasília (Independente de onde o servidor está)
+const getBrasiliaTime = () => {
+  const agora = new Date();
+  const brasilia = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const data = brasilia.toISOString().split('T')[0];
+  const hora = brasilia.toLocaleTimeString('pt-BR', { hour12: false });
+  return { data, hora };
+};
 
 // ==========================================
 // LOGIN (ADMIN / ALUNO)
@@ -26,11 +32,10 @@ app.post('/api/login', async (req, res) => {
 
   // Admin fixo
   if (email === 'admin@gt3.com' && dataNascimento === '2026-01-01') {
-    return res.json({ nome: 'Administrador', role: 'admin', email });
+    return res.json({ id: 'admin', nome: 'Administrador', role: 'admin', email });
   }
 
   try {
-    // Busca o aluno
     const { data: alunos, error } = await supabase
       .from('alunos')
       .select('*')
@@ -41,7 +46,6 @@ app.post('/api/login', async (req, res) => {
     let aluno;
 
     if (!alunos || alunos.length === 0) {
-      // Se não existe, cria um novo
       const { data: novoAluno, error: insertError } = await supabase
         .from('alunos')
         .insert([{ 
@@ -55,8 +59,9 @@ app.post('/api/login', async (req, res) => {
       aluno = novoAluno[0];
     } else {
       aluno = alunos[0];
-      // Valida a data de nascimento (YYYY-MM-DD)
-      if (aluno.data_nascimento !== dataNascimento) {
+      // Comparação rigorosa de data para evitar erros de fuso do DB
+      const dataFormatadaDb = aluno.data_nascimento.toString().split('T')[0];
+      if (dataFormatadaDb !== dataNascimento) {
         return res.status(401).json({ error: 'Data de nascimento incorreta.' });
       }
     }
@@ -73,11 +78,9 @@ app.post('/api/login', async (req, res) => {
 // ==========================================
 app.post('/api/ponto', async (req, res) => {
   const { aluno_id, nota, revisao } = req.body;
-  const hoje = new Date().toISOString().split('T')[0];
-  const agora = new Date().toLocaleTimeString('pt-BR', { hour12: false });
+  const { data: hoje, hora: agora } = getBrasiliaTime();
 
   try {
-    // Verifica se já existe ponto hoje
     const { data: pontoExistente } = await supabase
       .from('presencas')
       .select('*')
@@ -86,7 +89,6 @@ app.post('/api/ponto', async (req, res) => {
       .single();
 
     if (!pontoExistente) {
-      // Realiza CHECK-IN
       const { error } = await supabase
         .from('presencas')
         .insert([{ 
@@ -97,7 +99,6 @@ app.post('/api/ponto', async (req, res) => {
       if (error) throw error;
       return res.json({ msg: 'Check-in realizado com sucesso!' });
     } else {
-      // Realiza CHECK-OUT (atualiza o registro de hoje)
       if (pontoExistente.check_out) {
         return res.status(400).json({ error: 'Ponto de hoje já concluído.' });
       }
@@ -120,9 +121,6 @@ app.post('/api/ponto', async (req, res) => {
   }
 });
 
-// ==========================================
-// BUSCAR HISTÓRICO DO ALUNO
-// ==========================================
 app.get('/api/historico/aluno/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -139,7 +137,6 @@ app.get('/api/historico/aluno/:id', async (req, res) => {
   }
 });
 
-// Health Check
 app.get('/api/health', (_, res) => res.json({ status: 'online' }));
 
 if (process.env.NODE_ENV !== 'production') {

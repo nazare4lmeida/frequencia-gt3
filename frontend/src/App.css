@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 /* =========================================================
-   1. CONFIGURAÇÃO DE TEMA (Obrigatório Tailwind v4)
+   1. CONFIGURAÇÃO DE TEMA (Tailwind v4)
    ========================================================= */
 @theme {
   --color-background: hsl(var(--background));
@@ -33,27 +33,10 @@
   --color-ring: hsl(var(--ring));
 
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-
-  --animate-pulse-glow: pulse-glow 2s infinite;
-  --animate-fade-in: fade-in 0.3s ease-out;
-  --animate-slide-in-right: slide-in-right 0.5s ease-out;
-
-  @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
-    50% { box-shadow: 0 0 0 10px hsl(var(--primary) / 0); }
-  }
-  @keyframes fade-in {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  @keyframes slide-in-right {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
 }
 
 /* =========================================================
-   2. VARIÁVEIS DE DESIGN (CSS PURO)
+   2. BASE (variáveis + reset)
    ========================================================= */
 @layer base {
   :root {
@@ -87,77 +70,143 @@
     --header-bg: 222 84% 5% / 0.9;
   }
 
-  * { border-color: hsl(var(--border)); }
+  * {
+    border-color: hsl(var(--border));
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   }
 }
 
 /* =========================================================
-   3. UTILITÁRIOS (DEFINIDOS ANTES DO USO NO LAYOUT)
+   3. UTILITIES (⚠️ obrigatoriamente aqui)
    ========================================================= */
-.glass {
-  background: hsl(var(--card) / 0.8);
-  backdrop-filter: blur(24px);
-}
+@layer utilities {
+  .glass {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(24px);
+  }
 
-.glass-header {
-  background: hsl(var(--header-bg));
-  backdrop-filter: blur(12px);
-}
+  .glass-header {
+    background: hsl(var(--header-bg));
+    backdrop-filter: blur(12px);
+  }
 
-.shadow-card { box-shadow: var(--shadow-md); }
+  .shadow-card {
+    box-shadow: var(--shadow-md);
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s infinite;
+  }
+}
 
 /* =========================================================
-   4. CLASSES DE LAYOUT (COMPONENTES)
+   4. COMPONENTES / LAYOUT
    ========================================================= */
-.app-wrapper {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+@layer components {
+  .app-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    @apply glass-header border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50;
+  }
+
+  .content-grid {
+    @apply flex-1 p-6 grid gap-6 max-w-6xl mx-auto w-full;
+  }
+
+  .aula-card {
+    @apply glass p-8 rounded-2xl border shadow-card flex flex-col items-center justify-center text-center;
+  }
+
+  .historico-container {
+    @apply glass p-6 rounded-2xl border shadow-card overflow-x-auto;
+  }
+
+  .btn-ponto {
+    @apply px-10 py-5 rounded-full font-bold text-xl transition-all active:scale-95 shadow-md;
+  }
+
+  .btn-ponto.in {
+    @apply bg-success text-success-foreground hover:opacity-90;
+  }
+
+  .btn-ponto.out {
+    @apply bg-destructive text-destructive-foreground hover:opacity-90;
+  }
+
+  .historico-table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .historico-table th {
+    @apply p-3 border-b text-muted-foreground font-medium uppercase text-left;
+  }
+
+  .historico-table td {
+    @apply p-3 border-b;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4;
+  }
+
+  .modal-content {
+    @apply glass p-8 rounded-3xl border shadow-xl max-w-sm w-full animate-fade-in;
+  }
+
+  .custom-popup {
+    @apply fixed top-4 right-4 px-6 py-3 rounded-xl shadow-lg z-[200] font-bold animate-slide-in-right;
+  }
+
+  .custom-popup.sucesso {
+    @apply bg-success text-success-foreground;
+  }
+
+  .custom-popup.erro {
+    @apply bg-destructive text-destructive-foreground;
+  }
+
+  .login-container {
+    @apply min-h-screen flex items-center justify-center p-4;
+  }
+
+  .login-card {
+    @apply glass p-8 rounded-3xl border shadow-2xl w-full max-w-xs flex flex-col gap-4 animate-fade-in;
+  }
+
+  .login-card input {
+    @apply w-full p-3 rounded-xl border bg-background/50 outline-none focus:ring-2 focus:ring-primary;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:opacity-90;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-lg text-sm;
+  }
 }
 
-header {
-  @apply glass-header border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50;
+/* =========================================================
+   5. ANIMAÇÕES
+   ========================================================= */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  50% { box-shadow: 0 0 0 10px hsl(var(--primary) / 0); }
 }
 
-.content-grid {
-  @apply flex-1 p-6 grid gap-6 max-w-6xl mx-auto w-full;
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.aula-card {
-  @apply glass p-8 rounded-2xl border shadow-card flex flex-col items-center justify-center text-center;
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
-
-.historico-container {
-  @apply glass p-6 rounded-2xl border shadow-card overflow-x-auto;
-}
-
-.btn-ponto {
-  @apply px-10 py-5 rounded-full font-bold text-xl transition-all active:scale-95 shadow-md;
-}
-.btn-ponto.in { @apply bg-success text-success-foreground hover:opacity-90; }
-.btn-ponto.out { @apply bg-destructive text-destructive-foreground hover:opacity-90; }
-
-.animate-pulse-glow { animation: pulse-glow 2s infinite; }
-
-.historico-table { @apply w-full border-collapse text-sm; }
-.historico-table th { @apply p-3 border-b text-muted-foreground font-medium uppercase text-left; }
-.historico-table td { @apply p-3 border-b; }
-
-.modal-overlay { @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4; }
-.modal-content { @apply glass p-8 rounded-3xl border shadow-xl max-w-sm w-full animate-fade-in; }
-
-.custom-popup {
-  @apply fixed top-4 right-4 px-6 py-3 rounded-xl shadow-lg z-[200] font-bold animate-slide-in-right;
-}
-.custom-popup.sucesso { @apply bg-success text-success-foreground; }
-.custom-popup.erro { @apply bg-destructive text-destructive-foreground; }
-
-.login-container { @apply min-h-screen flex items-center justify-center p-4; }
-.login-card { @apply glass p-8 rounded-3xl border shadow-2xl w-full max-w-xs flex flex-col gap-4 animate-fade-in; }
-.login-card input { @apply w-full p-3 rounded-xl border bg-background/50 outline-none focus:ring-2 focus:ring-primary; }
-
-.btn-primary { @apply bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:opacity-90; }
-.btn-secondary { @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-lg text-sm; }

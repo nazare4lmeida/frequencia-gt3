@@ -283,47 +283,59 @@ export default function App() {
         <main className="content-grid">
           <div className="aula-card shadow-card">
             <div className="card-header-info">
-              <p className="text-muted">
+              <p style={{ color: "var(--text-dim)" }}>
+                {" "}
+                {/* Mudado para cinza */}
                 {new Date().toLocaleDateString("pt-BR")}
               </p>
-              <h2 className="text-teal-modern">Olá, {user.nome}!</h2>
+              <h2 style={{ color: "var(--text-dim)" }}>Olá, {user.nome}!</h2>{" "}
+              {/* Mudado para cinza */}
             </div>
 
-            <div className="info-banner">
+            <div
+              className="info-banner"
+              style={{
+                color: "var(--text-dim)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
               ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
               segunda-feira.
             </div>
 
             <div style={{ margin: "20px 0", textAlign: "center" }}>
-              {/* Validação de horários */}
               {(() => {
                 const { isSegunda, podeCheckIn, podeCheckOut } =
                   validarHorarioPonto();
 
+                // Se não for segunda, mostramos apenas o informativo cinza
                 if (!isSegunda) {
                   return (
-                    <div className="info-banner warning">
-                      ⚠️ O registro de frequência só abre às segundas-feiras.
+                    <div
+                      className="info-banner"
+                      style={{
+                        color: "var(--text-dim)",
+                        background: "transparent",
+                      }}
+                    >
+                      ⚠️ O sistema de presença está fechado. Retorne na
+                      segunda-feira a partir das 18:30.
                     </div>
                   );
                 }
 
+                // Se for segunda, a lógica dos botões permanece
                 if (!pontoHoje?.check_in) {
                   return (
                     <button
                       className="btn-ponto in"
                       onClick={() => baterPonto()}
                       disabled={!podeCheckIn}
-                      style={{
-                        opacity: podeCheckIn ? 1 : 0.5,
-                        cursor: podeCheckIn ? "pointer" : "not-allowed",
-                      }}
                     >
-                      {podeCheckIn ? "CHECK-IN" : "Check-in encerrado (20:30)"}
+                      {podeCheckIn ? "CHECK-IN" : "O Check-in encerrou às (20:30)"}
                     </button>
                   );
                 }
-
                 if (!pontoHoje?.check_out) {
                   return (
                     <button

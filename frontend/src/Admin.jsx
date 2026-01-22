@@ -8,8 +8,13 @@ export default function Admin() {
   const [stats, setStats] = useState({ totalPresencas: 0, sessoesAtivas: 0, faltasHoje: 0 });
   const [carregando, setCarregando] = useState(false);
   const [fezBusca, setFezBusca] = useState(false);
+  
+  // Estados para o Modal de Detalhes
+  const [alunoSelecionado, setAlunoSelecionado] = useState(null);
+  const [historicoAluno, setHistoricoAluno] = useState([]);
+  const [modalAberto, setModalAberto] = useState(false);
 
-  // 1. Efeito para carregar estatísticas gerais da turma selecionada
+  // 1. Carregar estatísticas gerais da turma
   useEffect(() => {
     const carregarStats = async () => {
       try {
@@ -25,7 +30,7 @@ export default function Admin() {
     carregarStats();
   }, [filtroTurma]);
 
-  // Lógica de busca de alunos (mantida conforme seu original)
+  // 2. Lógica de busca de alunos
   const buscarAlunos = async (termo) => {
     if (termo.length < 3) {
       setAlunos([]);
@@ -57,6 +62,24 @@ export default function Admin() {
     }, 500);
     return () => clearTimeout(timer);
   }, [busca]);
+
+  // 3. Buscar histórico individual do aluno (Correção: usando e-mail)
+  const verDetalhes = async (aluno) => {
+    setCarregando(true);
+    setAlunoSelecionado(aluno);
+    try {
+      const res = await fetch(`${API_URL}/historico/aluno/${aluno.email}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistoricoAluno(data);
+        setModalAberto(true);
+      }
+    } catch {
+      alert("Erro ao carregar histórico do aluno.");
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   const exportarCSV = async () => {
     setCarregando(true);
@@ -102,7 +125,7 @@ export default function Admin() {
         </select>
       </div>
 
-      {/* SEÇÃO DE ESTATÍSTICAS (MÉTRICAS) */}
+      {/* SEÇÃO DE ESTATÍSTICAS */}
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
@@ -153,7 +176,12 @@ export default function Admin() {
                       <td style={{ padding: '12px 0', fontSize: '0.9rem' }}>{aluno.nome}</td>
                       <td style={{ fontSize: '0.8rem' }}>{aluno.cpf || '---'}</td>
                       <td style={{ textAlign: 'right' }}>
-                         <button style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.8rem' }}>Ver Detalhes</button>
+                         <button 
+                            onClick={() => verDetalhes(aluno)}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.8rem' }}
+                         >
+                            Ver Detalhes
+                         </button>
                       </td>
                     </tr>
                   ))}
@@ -167,14 +195,14 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* COLUNA DIREITA: RELATÓRIOS E EXPORTAÇÃO */}
+        {/* COLUNA DIREITA: RELATÓRIOS */}
         <div className="shadow-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <h4>Relatórios Exportáveis</h4>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '10px' }}>
               Gere uma planilha completa com a frequência de todos os alunos da turma selecionada.
             </p>
-            <div className="info-banner" style={{ marginTop: '15px', fontSize: '0.85rem' }}>
+            <div className="info-banner" style={{ marginTop: '15px', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
               Turma: <strong>{FORMACOES.find(f => f.id === filtroTurma)?.nome}</strong>
             </div>
           </div>
@@ -189,6 +217,41 @@ export default function Admin() {
           </button>
         </div>
       </div>
+
+      {/* MODAL DE HISTÓRICO (DETALHES) */}
+      {modalAberto && alunoSelecionado && (
+        <div className="modal-overlay">
+          <div className="modal-content shadow-card" style={{ maxWidth: '500px', width: '90%' }}>
+            <h3 style={{ marginBottom: '5px' }}>Histórico de {alunoSelecionado.nome}</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '15px' }}>{alunoSelecionado.email}</p>
+            
+            <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg)' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-dim)' }}>
+                    <th style={{ textAlign: 'left', padding: '8px 0' }}>Data</th>
+                    <th>Entrada</th>
+                    <th>Saída</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historicoAluno.length > 0 ? historicoAluno.map((h, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '10px 0' }}>{new Date(h.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+                      <td style={{ textAlign: 'center' }}>{h.check_in || '--:--'}</td>
+                      <td style={{ textAlign: 'center' }}>{h.check_out || '--:--'}</td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-dim)' }}>Nenhum registro encontrado.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+            <button className="btn-secondary" style={{ width: '100%' }} onClick={() => setModalAberto(false)}>Fechar Detalhes</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -225,48 +225,47 @@ app.get("/api/historico/aluno/:email", async (req, res) => {
 // ESTATÍSTICAS DO ADMIN
 // ==========================================
 
-app.get("/api/admin/stats/:turma", async (req, res) => {
+app.get('/api/admin/stats/:turma', async (req, res) => {
   const { turma } = req.params;
   const { data: hoje } = getBrasiliaTime();
+  const agora = new Date();
+  const isSegunda = agora.getDay() === 1; //
 
   try {
-    // 1. Total de Presenças (registros concluídos com check-out)
-    const { count: totalPresencas, error: err1 } = await supabase
-      .from("presencas")
-      .select("*", { count: "exact", head: true })
-      .not("check_out", "is", null);
+    const { count: totalPresencas } = await supabase
+      .from('presencas')
+      .select('*', { count: 'exact', head: true })
+      .not('check_out', 'is', null);
 
-    // 2. Sessões Ativas (alunos que fizeram check-in hoje mas ainda não deram check-out)
-    const { count: sessoesAtivas, error: err2 } = await supabase
-      .from("presencas")
-      .select("*", { count: "exact", head: true })
-      .eq("data", hoje)
-      .is("check_out", null);
+    const { count: sessoesAtivas } = await supabase
+      .from('presencas')
+      .select('*', { count: 'exact', head: true })
+      .eq('data', hoje)
+      .is('check_out', null);
 
-    // 3. Faltas Hoje (Estimativa baseada em quem não registrou ponto hoje para essa turma)
-    // Nota: Para um cálculo real, você compararia o total de alunos da turma vs quem registrou ponto.
-    const { count: totalAlunosTurma } = await supabase
-      .from("alunos")
-      .select("*", { count: "exact", head: true })
-      .eq("formacao", turma);
+    // Lógica corrigida: se não for segunda, faltas é 0
+    let faltasHoje = 0;
+    if (isSegunda) {
+      const { count: totalAlunosTurma } = await supabase
+        .from('alunos')
+        .select('*', { count: 'exact', head: true })
+        .eq('formacao', turma);
 
-    const { count: presentesHoje } = await supabase
-      .from("presencas")
-      .select("*", { count: "exact", head: true })
-      .eq("data", hoje);
+      const { count: presentesHoje } = await supabase
+        .from('presencas')
+        .select('*', { count: 'exact', head: true })
+        .eq('data', hoje);
 
-    const faltasHoje = (totalAlunosTurma || 0) - (presentesHoje || 0);
-
-    if (err1 || err2) throw err1 || err2;
+      faltasHoje = (totalAlunosTurma || 0) - (presentesHoje || 0);
+    }
 
     res.json({
       totalPresencas: totalPresencas || 0,
       sessoesAtivas: sessoesAtivas || 0,
-      faltasHoje: faltasHoje < 0 ? 0 : faltasHoje,
+      faltasHoje: faltasHoje < 0 ? 0 : faltasHoje
     });
   } catch (err) {
-    console.error("ERRO STATS ADMIN:", err);
-    res.status(500).json({ error: "Erro ao carregar estatísticas." });
+    res.status(500).json({ error: 'Erro ao carregar estatísticas.' });
   }
 });
 

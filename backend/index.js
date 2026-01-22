@@ -1,4 +1,4 @@
-const express = require('express');
+刻const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
 
@@ -6,12 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Middleware Vercel
+// Middleware para garantir que o Vercel trate as rotas /api
 app.use('/api', (req, res, next) => next());
-
-// ⚠️ LOG CRÍTICO (remove depois)
-console.log('SUPABASE_URL OK?', !!process.env.SUPABASE_URL);
-console.log('SUPABASE_KEY OK?', !!process.env.SUPABASE_KEY);
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -34,68 +30,120 @@ app.post('/api/login', async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase
+    // Busca o aluno
+    const { data: alunos, error } = await supabase
       .from('alunos')
       .select('*')
-      .eq('email', email);
+      .eq('email', email.trim().toLowerCase());
 
-    if (error) {
-      console.error('SUPABASE SELECT ERROR:', error);
-      return res.status(500).json({ error: 'Erro ao consultar aluno.' });
-    }
+    if (error) throw error;
 
-    // Nenhum aluno → cria
-    if (!data || data.length === 0) {
-      const { data: novo, error: insertError } = await supabase
+    let aluno;
+
+    if (!alunos || alunos.length === 0) {
+      // Se não existe, cria um novo
+      const { data: novoAluno, error: insertError } = await supabase
         .from('alunos')
-        .insert([{
-          email,
-          nome: nome || 'Aluno GT',
-          data_nascimento: dataNascimento
+        .insert([{ 
+          email: email.trim().toLowerCase(), 
+          nome: nome || 'Aluno GT', 
+          data_nascimento: dataNascimento 
         }])
-        .select()
-        .single();
+        .select();
 
-      if (insertError) {
-        console.error('SUPABASE INSERT ERROR:', insertError);
-        return res.status(500).json({ error: 'Erro ao criar aluno.' });
+      if (insertError) throw insertError;
+      aluno = novoAluno[0];
+    } else {
+      aluno = alunos[0];
+      // Valida a data de nascimento (YYYY-MM-DD)
+      if (aluno.data_nascimento !== dataNascimento) {
+        return res.status(401).json({ error: 'Data de nascimento incorreta.' });
       }
-
-      return res.json({ ...novo, role: 'aluno' });
-    }
-
-    // Mais de um registro → ERRO DE DADOS
-    if (data.length > 1) {
-      console.error('EMAIL DUPLICADO:', email);
-      return res.status(500).json({
-        error: 'Erro interno: email duplicado no banco.'
-      });
-    }
-
-    const aluno = data[0];
-
-    if (aluno.data_nascimento !== dataNascimento) {
-      return res.status(401).json({ error: 'Data de nascimento inválida.' });
     }
 
     res.json({ ...aluno, role: 'aluno' });
-
   } catch (err) {
-    console.error('LOGIN FATAL ERROR:', err);
-    res.status(500).json({ error: 'Erro interno no login.' });
+    console.error('ERRO NO LOGIN:', err);
+    res.status(500).json({ error: 'Erro interno no servidor de login.' });
   }
 });
 
 // ==========================================
-// HEALTH CHECK (TESTE DIRETO)
+// REGISTRAR PONTO (CHECK-IN / CHECK-OUT)
 // ==========================================
-app.get('/api/health', (_, res) => {
-  res.json({ ok: true });
+app.post('/api/ponto', async (req, res) => {
+  const { aluno_id, nota, revisao } = req.body;
+  const hoje = new Date().toISOString().split('T')[0];
+  const agora = new Date().toLocaleTimeString('pt-BR', { hour12: false });
+
+  try {
+    // Verifica se já existe ponto hoje
+    const { data: pontoExistente } = await supabase
+      .from('presencas')
+      .select('*')
+      .eq('aluno_id', aluno_id)
+      .eq('data', hoje)
+      .single();
+
+    if (!pontoExistente) {
+      // Realiza CHECK-IN
+      const { error } = await supabase
+        .from('presencas')
+        .insert([{ 
+          aluno_id, 
+          data: hoje, 
+          check_in: agora 
+        }]);
+      if (error) throw error;
+      return res.json({ msg: 'Check-in realizado com sucesso!' });
+    } else {
+      // Realiza CHECK-OUT (atualiza o registro de hoje)
+      if (pontoExistente.check_out) {
+        return res.status(400).json({ error: 'Ponto de hoje já concluído.' });
+      }
+
+      const { error } = await supabase
+        .from('presencas')
+        .update({ 
+          check_out: agora,
+          feedback_nota: nota,
+          feedback_texto: revisao 
+        })
+        .eq('id', pontoExistente.id);
+        
+      if (error) throw error;
+      return res.json({ msg: 'Check-out realizado! Até amanhã.' });
+    }
+  } catch (err) {
+    console.error('ERRO AO BATER PONTO:', err);
+    res.status(500).json({ error: 'Falha ao registrar ponto no banco.' });
+  }
 });
 
 // ==========================================
+// BUSCAR HISTÓRICO DO ALUNO
+// ==========================================
+app.get('/api/historico/aluno/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('presencas')
+      .select('*')
+      .eq('aluno_id', req.params.id)
+      .order('data', { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('ERRO HISTORICO:', err);
+    res.status(500).json({ error: 'Erro ao carregar histórico.' });
+  }
+});
+
+// Health Check
+app.get('/api/health', (_, res) => res.json({ status: 'online' }));
+
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(3001, () => console.log('🚀 Backend rodando local'));
+  app.listen(3001, () => console.log('🚀 Backend rodando em http://localhost:3001'));
 }
 
 module.exports = app;

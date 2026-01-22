@@ -1,17 +1,12 @@
-/** @type {import('tailwindcss').Config} */
 import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
 
   content: [
-    "./pages/**/*.{js,jsx,ts,tsx}",
-    "./components/**/*.{js,jsx,ts,tsx}",
-    "./app/**/*.{js,jsx,ts,tsx}",
+    "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
-
-  prefix: "",
 
   theme: {
     container: {

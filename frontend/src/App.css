@@ -1,307 +1,398 @@
 /* =========================================================
-   VARIÁVEIS E BASE
+   IMPORTAÇÃO E VARIÁVEIS
    ========================================================= */
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap");
 
 :root {
-  --bg: #f8faff;
-  --header-bg: rgba(255, 255, 255, 0.85);
-  --card: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --accent: #0b635b;
-  --accent-hover: #0f766e;
-  --accent-glow: rgba(13, 148, 136, 0.15);
-  --border: #e2e8f0;
-  --radius-lg: 24px;
-  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    --bg: #f8faff;
+    --header-bg: rgba(255, 255, 255, 0.85);
+    --card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #0b635b;
+    --accent-hover: #0f766e;
+    --accent-glow: rgba(13, 148, 136, 0.25);
+    --border: #e2e8f0;
+    --radius-lg: 24px;
+    --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
 }
 
 body.dark {
-  --bg: #0f172a;
-  --header-bg: rgba(15, 23, 42, 0.9);
-  --card: #1e293b;
-  --text-main: #f1f5f9;
-  --text-muted: #759aaf;
-  --accent: #146459;
-  --border: #2c3747;
-  --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    --bg: #0f172a;
+    --header-bg: rgba(15, 23, 42, 0.9);
+    --card: #1e293b;
+    --text-main: #f1f5f9;
+    --text-muted: #759aaf;
+    --accent: #146459;
+    --border: #2c3747;
+    --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
 }
 
+/* =========================================================
+   BASE
+   ========================================================= */
 body {
-  margin: 0;
-  font-family: "Plus Jakarta Sans", sans-serif;
-  background-color: var(--bg);
-  color: var(--text-main);
-  transition: all 0.3s ease;
+    margin: 0;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    background-color: var(--bg);
+    color: var(--text-main);
+    transition: background 0.3s ease;
 }
 
-/* =========================================================
-   LAYOUT E CONTEÚDO
-   ========================================================= */
 .app-wrapper {
-  min-height: 100vh;
-  padding-bottom: 40px;
-}
-
-header {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 5%;
-  background: var(--header-bg);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-}
-
-.content-grid {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 0 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+    min-height: 100vh;
+    padding-bottom: 60px;
 }
 
 /* =========================================================
-   CARD DE PONTO (MODERNO)
-   ========================================================= */
-.aula-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 40px;
-  text-align: center;
-  box-shadow: var(--shadow);
-}
-
-.aula-card p {
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-bottom: 20px;
-}
-
-/* Botão de Ponto Ajustado */
-.btn-ponto {
-  width: 100%;
-  max-width: 300px; /* Impede que fique gigante */
-  padding: 16px 32px;
-  font-size: 1rem;
-  font-weight: 700;
-  border-radius: 14px;
-  cursor: pointer;
-  border: none;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  margin: 0 auto;
-}
-
-.btn-ponto.in { background: #10b981; color: white; }
-.btn-ponto.out { background: #f59e0b; color: white; }
-
-.btn-ponto:hover {
-  transform: translateY(-3px);
-  filter: brightness(1.1);
-  box-shadow: 0 8px 20px var(--accent-glow);
-}
-
-/* =========================================================
-   HISTÓRICO (CORREÇÃO DE VISIBILIDADE)
-   ========================================================= */
-.historico-container {
-  margin-top: 20px;
-  display: block !important; /* Garante que apareça */
-}
-
-.historico-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--card);
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-}
-
-.historico-table th {
-  background: var(--accent-glow);
-  color: var(--accent);
-  padding: 16px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  font-weight: 800;
-}
-
-.historico-table td {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
-}
-
-.historico-table tr:hover td {
-  background: var(--accent-glow);
-}
-
-/* =========================================================
-   LOGIN E COMPONENTES
+   LOGIN & BRANDING
    ========================================================= */
 .login-container {
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+}
+
+.theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
 }
 
 .login-card {
-  width: 100%;
-  max-width: 400px;
-  padding: 40px;
-  background: var(--card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 400px;
+    padding: 40px;
+    text-align: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
 }
 
-input {
-  width: 100%;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-main);
-  box-sizing: border-box;
+.brand h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
 }
 
-.btn-primary {
-  width: 100%;
-  padding: 14px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.3s;
+.brand h1 span {
+    color: var(--accent);
 }
 
-/* POPUPS */
-.custom-popup {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 16px 24px;
-  border-radius: 12px;
-  color: white;
-  font-weight: 700;
-  z-index: 2000;
-  animation: slideIn 0.3s ease-out;
+#loginForm {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
 }
 
-.custom-popup.sucesso { background: #10b981; }
-.custom-popup.erro { background: #ef4444; }
-
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+#loginForm input {
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: inherit;
+    outline: none;
 }
 
-/* Ponto Concluído */
-.ponto-concluido {
+/* =========================================================
+   HEADER & NAVEGAÇÃO
+   ========================================================= */
+header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 5%;
+    background: var(--header-bg);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* =========================================================
+   CONTEÚDO E CARDS
+   ========================================================= */
+.content-grid {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.aula-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+/* =========================================================
+   BOTÕES GERAIS
+   ========================================================= */
+.btn-primary, .btn-save {
+    padding: 14px 24px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    height: 38px;
+    transition: 0.3s;
+}
+
+.btn-secondary:hover {
+    background: var(--bg);
+    border-color: var(--accent);
+}
+
+/* =========================================================
+   SISTEMA DE PONTO
+   ========================================================= */
+.btn-ponto {
+    width: 100%;
+    max-width: 300px;
     padding: 20px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    border-radius: 15px;
+    cursor: pointer;
+    border: none;
+    margin: 20px auto 0 auto;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+.btn-ponto.in {
+    background: #10b981;
+    color: white;
+}
+
+.btn-ponto.out {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-ponto:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+.ponto-concluido {
+    margin-top: 20px;
+    padding: 15px;
     background: var(--accent-glow);
     color: var(--accent);
     border-radius: 12px;
     font-weight: 700;
-    border: 2px dashed var(--accent);
-}
-
-/* Responsivo extra */
-@media (max-width: 480px) {
-  .aula-card {
-    padding: 24px;
-  }
-
-  .modal-content {
-    padding: 20px;
-  }
-
-  .btn-ponto {
-    font-size: 1rem;
-    padding: 16px;
-  }
+    text-align: center;
+    border: 1px dashed var(--accent);
 }
 
 /* =========================================================
-
-   RESPONSIVIDADE
-
+   HISTÓRICO
    ========================================================= */
-
-@media (max-width: 768px) {
-  header {
-    flex-direction: column;
-    gap: 15px;
-    padding: 1.5rem;
-    text-align: center;
-  }
-
-  .nav-actions {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .content-grid {
+.historico-container {
+    background: transparent;
     margin-top: 20px;
-  }
-
-  .stats-container {
-    flex-direction: column;
-  }
-
-  .admin-header-box {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .admin-actions {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-  }
 }
 
-@media (max-width: 600px) {
-  .aula {
-    padding: 24px;
-  }
-
-  .aula-actions {
-    flex-direction: column;
+.historico-table {
     width: 100%;
-  }
-
-  .btn-primary,
-  .btn-checkout {
-    width: 100%;
-  }
-
-  .historico-table {
-    font-size: 0.8rem;
-  }
-
-  .historico-table th,
-  .historico-table td {
-    padding: 10px;
-  }
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    font-size: 0.9rem;
 }
 
+.historico-table th, .historico-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
 
+.historico-table th {
+    background: var(--accent-glow);
+    color: var(--accent);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
 
+.historico-table tr:hover td {
+    background: var(--bg);
+}
+
+/* =========================================================
+   MODAL & FEEDBACK
+   ========================================================= */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 450px;
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    padding: 30px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    position: relative;
+    animation: slideUp 0.3s ease-out;
+}
+
+.modal-content textarea {
+    width: 100%;
+    min-height: 100px;
+    margin: 15px 0;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: inherit;
+    resize: none;
+    box-sizing: border-box;
+}
+
+.rating-group {
+    display: flex;
+    gap: 8px;
+    margin: 15px 0;
+}
+
+.rating-group button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text-main);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rating-group button.active {
+    background: var(--accent) !important;
+    color: white !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* =========================================================
+   ALERTAS & POPUPS
+   ========================================================= */
+.custom-popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 30px;
+    border-radius: 12px;
+    z-index: 2000;
+    font-weight: 600;
+    color: white;
+    min-width: 260px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s forwards;
+}
+
+.custom-popup.sucesso { background: #16a34a; }
+.custom-popup.erro { background: #dc2626; }
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.alarme-box {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #f1c40f;
+    padding: 12px 20px;
+    border-radius: 50px;
+    z-index: 10000;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    color: #000;
+    font-weight: 700;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+/* =========================================================
+   RESPONSIVIDADE
+   ========================================================= */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        gap: 15px;
+        padding: 1.5rem;
+    }
+    .historico-table { font-size: 0.8rem; }
+}
+
+@media (max-width: 480px) {
+    .aula-card, .modal-content { padding: 24px; }
+    .btn-ponto { font-size: 1rem; padding: 16px; }
+}

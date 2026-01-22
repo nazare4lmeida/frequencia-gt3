@@ -2,21 +2,25 @@ import React, { useState } from "react";
 import { API_URL } from "./Constants";
 
 export default function Perfil({ user, setUser, onVoltar }) {
-  // Estados para edição total
   const [nome, setNome] = useState(user.nome || "");
   const [cpf, setCpf] = useState(user.cpf || "");
-  const [avatar, setAvatar] = useState(user.avatar || "bottts"); // Estilo padrão
+  const [avatar, setAvatar] = useState(user.avatar || "bottts");
   const [loading, setLoading] = useState(false);
 
-  // Modelos prontos de tecnologia (Estilos do DiceBear)
   const modelosAvatar = [
-    { id: "bottts", nome: "Robô", url: `https://api.dicebear.com/7.x/bottts/svg?seed=${user.nome}` },
-    { id: "avataaars", nome: "Developer", url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.nome}` },
-    { id: "pixel-art", nome: "8-Bit", url: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.nome}` },
-    { id: "identicon", nome: "Código", url: `https://api.dicebear.com/7.x/identicon/svg?seed=${user.nome}` }
+    { id: "bottts", nome: "Robô", url: `https://api.dicebear.com/7.x/bottts/svg?seed=${nome}` },
+    { id: "avataaars", nome: "Developer", url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nome}` },
+    { id: "pixel-art", nome: "8-Bit", url: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${nome}` },
+    { id: "identicon", nome: "Código", url: `https://api.dicebear.com/7.x/identicon/svg?seed=${nome}` }
   ];
 
   const salvarPerfil = async () => {
+    // Validação básica de CPF antes de tentar salvar
+    if (cpf && cpf.length < 11) {
+      alert("Por favor, insira um CPF válido.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/aluno/perfil`, {
@@ -24,25 +28,47 @@ export default function Perfil({ user, setUser, onVoltar }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           id: user.id, 
-          nome, 
-          cpf,
+          nome: nome.trim(), 
+          cpf: cpf.trim(),
           avatar 
         }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        // Atualiza o estado global e o localStorage para persistir
-        const usuarioAtualizado = { ...user, nome, cpf, avatar };
+        // 1. Criamos o objeto atualizado
+        const usuarioAtualizado = { ...user, nome: nome.trim(), cpf: cpf.trim(), avatar };
+        
+        // 2. Atualizamos o estado global do App.jsx para refletir a mudança no Header e Boas-vindas
         setUser(usuarioAtualizado);
         
-        const session = JSON.parse(localStorage.getItem("gt3_session"));
-        session.userData = usuarioAtualizado;
-        localStorage.setItem("gt3_session", JSON.stringify(session));
+        // 3. ATUALIZAÇÃO CRÍTICA: Atualizar a sessão para que o F5 não resete os dados
+        const sessionStr = localStorage.getItem("gt3_session");
+        if (sessionStr) {
+          const session = JSON.parse(sessionStr);
+          session.userData = usuarioAtualizado;
+          localStorage.setItem("gt3_session", JSON.stringify(session));
+        }
+
+        // 4. Opcional: Atualizar também o "gt3_remember" caso você queira que o nome mude no Login
+        const rememberStr = localStorage.getItem("gt3_remember");
+        if (rememberStr) {
+          const remember = JSON.parse(rememberStr);
+          localStorage.setItem("gt3_remember", JSON.stringify({ 
+            ...remember, 
+            email: usuarioAtualizado.email 
+          }));
+        }
 
         alert("Perfil atualizado com sucesso!");
+        onVoltar(); // Retorna para a home após salvar
+      } else {
+        alert(data.error || "Erro ao salvar informações.");
       }
-    } catch {
-      alert("Erro ao salvar informações.");
+    } catch (err) {
+      console.error("Erro ao salvar perfil:", err);
+      alert("Erro de conexão com o servidor.");
     } finally {
       setLoading(false);
     }
@@ -54,7 +80,6 @@ export default function Perfil({ user, setUser, onVoltar }) {
         <div className="card-header-info" style={{ textAlign: 'center' }}>
           <h2>Meu Perfil Tech</h2>
           
-          {/* Visualização do Avatar Selecionado */}
           <div style={{ margin: '20px auto', width: '100px', height: '100px', borderRadius: '50%', background: 'var(--bg-deep)', border: '2px solid var(--teal-primary)', overflow: 'hidden' }}>
             <img 
               src={`https://api.dicebear.com/7.x/${avatar}/svg?seed=${nome}`} 
@@ -64,7 +89,6 @@ export default function Perfil({ user, setUser, onVoltar }) {
           </div>
         </div>
 
-        {/* Seletor de Personagens */}
         <div style={{ marginBottom: '25px' }}>
           <label className="stat-label" style={{ textAlign: 'center' }}>Escolha seu Personagem</label>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>

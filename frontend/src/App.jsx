@@ -9,7 +9,6 @@ export default function App() {
     if (!s) return null;
     try {
       const { userData, timestamp } = JSON.parse(s);
-      // Sessão de 12 horas para facilitar para os alunos
       if (Date.now() - timestamp < 12 * 60 * 60 * 1000) return userData;
     } catch (err) {
       console.error(err);
@@ -72,7 +71,6 @@ export default function App() {
       }
 
       setUser(data);
-      // Salva apenas os dados básicos para o "lembrar"
       localStorage.setItem("gt3_remember", JSON.stringify({ email: data.email, dataNasc: data.data_nascimento }));
       localStorage.setItem(
         "gt3_session",
@@ -134,8 +132,11 @@ export default function App() {
     );
   }
 
-  const hoje = new Date().toLocaleDateString('en-CA'); // Pega YYYY-MM-DD local
+  const hoje = new Date().toLocaleDateString('en-CA');
   const pontoHoje = historico.find((h) => h.data.split('T')[0] === hoje);
+
+  // Cálculo de estatísticas (Usabilidade)
+  const totalPresencas = historico.length;
 
   return (
     <div className="app-wrapper">
@@ -149,30 +150,80 @@ export default function App() {
       )}
 
       <header className="glass-header">
-        <div className="brand">
-          <h1>GT <span>3.0</span></h1>
+        <div className="brand-logo">
+          <div className="logo-circle">GT 3.0</div>
+          <div className="brand-text">
+            Registro de Frequência
+            <span>Geração Tech 3.0</span>
+          </div>
+          {/* Card identificador de Usuário */}
+          <div className="user-badge">{user.role === 'admin' ? 'Admin' : 'Aluno'}</div>
         </div>
-        <button className="btn-secondary" onClick={() => { localStorage.removeItem("gt3_session"); setUser(null); }}>
-          Sair
-        </button>
+
+        <div className="nav-actions">
+          {/* Botão para rolar até o histórico */}
+          <button 
+            className="btn-action-circle" 
+            title="Ver Histórico" 
+            onClick={() => document.getElementById('historico-section').scrollIntoView({ behavior: 'smooth' })}
+          >
+            📊
+          </button>
+
+          {/* Botão de Dark Mode */}
+          <button 
+            className="btn-action-circle" 
+            title="Alternar Tema" 
+            onClick={() => setIsDarkMode(!isDarkMode)}
+          >
+            {isDarkMode ? "☀️" : "🌙"}
+          </button>
+
+          <button className="btn-secondary" onClick={() => { localStorage.removeItem("gt3_session"); setUser(null); }}>
+            Sair
+          </button>
+        </div>
       </header>
 
       <main className="content-grid">
         <div className="aula-card shadow-card">
-          <p className="text-muted-foreground">{new Date().toLocaleDateString("pt-BR")}</p>
+          <div className="card-header-info">
+            <p className="text-muted">{new Date().toLocaleDateString("pt-BR")}</p>
+            <h2 className="text-teal-modern">Olá, {user.nome}!</h2>
+          </div>
+
           <div style={{ margin: "20px 0" }}>
             {!pontoHoje?.check_in ? (
-              <button className="btn-ponto in" onClick={() => baterPonto()}>CHECK-IN</button>
+              <button className="btn-ponto in animate-pulse-glow" onClick={() => baterPonto()}>CHECK-IN</button>
             ) : !pontoHoje?.check_out ? (
               <button className="btn-ponto out" onClick={() => setFeedback({ ...feedback, modal: true })}>CHECK-OUT</button>
             ) : (
               <div className="ponto-concluido">✔ Presença confirmada</div>
             )}
           </div>
+
+          <p className="usability-info">
+            Seu registro será processado de acordo com o horário do servidor (Brasília). 
+            Certifique-se de realizar o check-out ao final da aula para validar sua participação.
+          </p>
         </div>
 
-        <div className="historico-container glass shadow-card">
-          <h3 style={{ marginBottom: "15px" }}>Meu Histórico</h3>
+        {/* Estatísticas Rápidas de Usabilidade */}
+        <div className="stats-grid">
+            <div className="stat-card">
+                <span className="stat-label">Total de Presenças</span>
+                <div className="stat-value">{totalPresencas}</div>
+            </div>
+            <div className="stat-card">
+                <span className="stat-label">Status da Sessão</span>
+                <div className="stat-value text-success" style={{ fontSize: '1.2rem' }}>Ativa</div>
+            </div>
+        </div>
+
+        <div id="historico-section" className="historico-container glass shadow-card">
+          <div className="flex justify-between items-center mb-4">
+            <h3>Meu Histórico Completo</h3>
+          </div>
           <div className="table-responsive">
             <table className="historico-table">
               <thead>
@@ -183,13 +234,19 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {historico.map((h, i) => (
-                  <tr key={i}>
-                    <td>{new Date(h.data).toLocaleDateString("pt-BR", { timeZone: 'UTC' })}</td>
-                    <td>{h.check_in || "--:--"}</td>
-                    <td>{h.check_out || "--:--"}</td>
-                  </tr>
-                ))}
+                {historico.length === 0 ? (
+                    <tr>
+                        <td colSpan="3" className="text-center text-muted">Nenhum registro encontrado.</td>
+                    </tr>
+                ) : (
+                    historico.map((h, i) => (
+                      <tr key={i}>
+                        <td>{new Date(h.data).toLocaleDateString("pt-BR", { timeZone: 'UTC' })}</td>
+                        <td>{h.check_in || "--:--"}</td>
+                        <td>{h.check_out || "--:--"}</td>
+                      </tr>
+                    ))
+                )}
               </tbody>
             </table>
           </div>
@@ -200,7 +257,8 @@ export default function App() {
         <div className="modal-overlay">
           <div className="modal-content glass shadow-xl">
             <h3>Finalizar Check-out</h3>
-            <p>Avalie a aula de hoje:</p>
+            <p className="text-muted" style={{ marginBottom: '15px' }}>Como foi sua experiência na aula de hoje?</p>
+            
             <div className="rating-group" style={{ display: "flex", gap: "10px", margin: "15px 0", justifyContent: "center" }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} className={feedback.nota === n ? "active" : ""} onClick={() => setFeedback({ ...feedback, nota: n })}>{n}</button>
@@ -208,13 +266,13 @@ export default function App() {
             </div>
             <textarea
               className="input-notes"
-              placeholder="O que achou da aula? (opcional)"
+              placeholder="Algum comentário ou dúvida sobre o conteúdo?"
               value={feedback.revisao}
               onChange={(e) => setFeedback({ ...feedback, revisao: e.target.value })}
             />
             <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
-              <button className="btn-primary" onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}>Confirmar</button>
-              <button className="btn-secondary" onClick={() => setFeedback({ ...feedback, modal: false })}>Cancelar</button>
+              <button className="btn-primary" onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}>Confirmar Saída</button>
+              <button className="btn-secondary" onClick={() => setFeedback({ ...feedback, modal: false })}>Voltar</button>
             </div>
           </div>
         </div>

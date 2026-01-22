@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import "./App.css";
 import { API_URL } from "./Constants";
 import Login from "./Login";
-import Admin from "./Admin"; 
-import Perfil from "./Perfil"; 
+import Admin from "./Admin";
+import Perfil from "./Perfil";
 
 // Funções para o Calendário de Segundas-feiras
 const getProximasSegundas = (formacao) => {
@@ -41,7 +41,7 @@ export default function App() {
     return salvo ? JSON.parse(salvo) : null;
   });
 
-  const [view, setView] = useState("home"); 
+  const [view, setView] = useState("home");
   const [form, setForm] = useState(dadosSalvos || { email: "", dataNasc: "" });
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
@@ -56,7 +56,6 @@ export default function App() {
     return salvo ? JSON.parse(salvo) : true;
   });
 
-  // Removido alarmeAtivo e setAlarmeAtivo para limpar erros de variáveis não utilizadas
   const [currentTime, setCurrentTime] = useState(
     new Date().toLocaleTimeString("pt-BR", {
       hour: "2-digit",
@@ -64,27 +63,38 @@ export default function App() {
     }),
   );
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(
-        new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      );
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const [alarmeAtivo] = useState(true);
 
   const exibirPopup = (msg, tipo) => {
     setPopup({ show: true, msg, tipo });
     setTimeout(() => setPopup({ show: false, msg: "", tipo: "" }), 5000);
   };
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const agora = new Date();
+      const horaFormatada = agora.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      setCurrentTime(horaFormatada);
+
+      // Lógica do alarme: Avisar às 18:30 nas segundas
+      if (alarmeAtivo && agora.getDay() === 1 && horaFormatada === "18:30") {
+        exibirPopup(
+          "📢 Hora da aula! Não esqueça de fazer seu Check-in.",
+          "aviso",
+        );
+        // Toca um som discreto se quiser ou apenas o popup
+      }
+    }, 10000); // Checa a cada 10 segundos para poupar processamento
+    return () => clearInterval(timer);
+  }, [alarmeAtivo]);
+
   const carregarHistorico = useCallback(async () => {
-    if (!user?.id || user.role === "admin") return;
+    if (!user?.email || user.role === "admin") return;
     try {
-      const res = await fetch(`${API_URL}/historico/aluno/${user.id}`);
+      const res = await fetch(`${API_URL}/historico/aluno/${user.email}`);
       if (res.ok) {
         const data = await res.json();
         setHistorico(data);
@@ -95,12 +105,12 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.email) {
       Promise.resolve().then(() => {
         carregarHistorico();
       });
     }
-  }, [user?.id, carregarHistorico]);
+  }, [user?.email, carregarHistorico]);
 
   const handleLogin = async () => {
     try {
@@ -118,6 +128,8 @@ export default function App() {
         return;
       }
       setUser(data);
+
+      // Salva no local storage usando os campos que o banco retorna (email e data_nascimento)
       localStorage.setItem(
         "gt3_remember",
         JSON.stringify({ email: data.email, dataNasc: data.data_nascimento }),
@@ -131,13 +143,14 @@ export default function App() {
     }
   };
 
+  // AJUSTE: Bater Ponto enviando o Email
   const baterPonto = async (extra = {}) => {
     try {
       const res = await fetch(`${API_URL}/ponto`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          aluno_id: user.id,
+          aluno_id: user.email, // Enviando o email para a coluna aluno_email no backend
           ...extra,
         }),
       });
@@ -183,9 +196,13 @@ export default function App() {
       {popup.show && (
         <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>
       )}
-      
+
       <header className="glass-header">
-        <div className="brand-logo" onClick={() => setView("home")} style={{cursor: 'pointer'}}>
+        <div
+          className="brand-logo"
+          onClick={() => setView("home")}
+          style={{ cursor: "pointer" }}
+        >
           <div className="logo-circle">GT 3.0</div>
           <div className="brand-text">
             Registro de Frequência
@@ -199,11 +216,19 @@ export default function App() {
           <span className="clock">🕒 {currentTime}</span>
           <div className="nav-actions">
             {user.role === "admin" && (
-              <button className="btn-secondary" onClick={() => setView(view === "admin" ? "home" : "admin")}>
+              <button
+                className="btn-secondary"
+                onClick={() => setView(view === "admin" ? "home" : "admin")}
+              >
                 {view === "admin" ? "Início" : "Painel Admin"}
               </button>
             )}
-            <button className="btn-action-circle" onClick={() => setView("perfil")}>👤</button>
+            <button
+              className="btn-action-circle"
+              onClick={() => setView("perfil")}
+            >
+              👤
+            </button>
             <button
               className="btn-action-circle"
               title="Alternar Tema"
@@ -227,7 +252,11 @@ export default function App() {
       {view === "admin" && user.role === "admin" ? (
         <Admin />
       ) : view === "perfil" ? (
-        <Perfil user={user} setUser={setUser} onVoltar={() => setView("home")} />
+        <Perfil
+          user={user}
+          setUser={setUser}
+          onVoltar={() => setView("home")}
+        />
       ) : (
         <main className="content-grid">
           <div className="aula-card shadow-card">
@@ -243,7 +272,7 @@ export default function App() {
               segunda-feira.
             </div>
 
-            <div style={{ margin: "20px 0", textAlign: 'center' }}>
+            <div style={{ margin: "20px 0", textAlign: "center" }}>
               {!pontoHoje?.check_in ? (
                 <button className="btn-ponto in" onClick={() => baterPonto()}>
                   CHECK-IN
@@ -288,7 +317,10 @@ export default function App() {
                 {getProximasSegundas(user.formacao).map((data, i) => (
                   <li
                     key={i}
-                    style={{ marginBottom: "5px", color: "var(--teal-primary)" }}
+                    style={{
+                      marginBottom: "5px",
+                      color: "var(--teal-primary)",
+                    }}
                   >
                     ● {data} — 19:00h
                   </li>
@@ -312,7 +344,10 @@ export default function App() {
             </div>
           </div>
 
-          <div id="historico-section" className="historico-container shadow-card">
+          <div
+            id="historico-section"
+            className="historico-container shadow-card"
+          >
             <h3>Meu Histórico Completo</h3>
             <div className="table-responsive">
               <table className="historico-table">
@@ -326,7 +361,13 @@ export default function App() {
                 <tbody>
                   {historico.length === 0 ? (
                     <tr>
-                      <td colSpan="3" style={{textAlign: 'center', color: 'var(--text-dim)'}}>
+                      <td
+                        colSpan="3"
+                        style={{
+                          textAlign: "center",
+                          color: "var(--text-dim)",
+                        }}
+                      >
                         Nenhum registro encontrado.
                       </td>
                     </tr>

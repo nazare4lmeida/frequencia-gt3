@@ -91,6 +91,20 @@ export default function App() {
     return () => clearInterval(timer);
   }, [alarmeAtivo]);
 
+  const validarHorarioPonto = () => {
+    const agora = new Date();
+    const diaSemana = agora.getDay(); // 1 é Segunda-feira
+    const hora = agora.getHours();
+    const minutos = agora.getMinutes();
+    const horaDecimal = hora + minutos / 60;
+
+    const isSegunda = diaSemana === 1;
+    const podeCheckIn = isSegunda && horaDecimal <= 20.5; // Até 20:30
+    const podeCheckOut = isSegunda && horaDecimal >= 22; // Após 22:00
+
+    return { isSegunda, podeCheckIn, podeCheckOut };
+  };
+
   const carregarHistorico = useCallback(async () => {
     if (!user?.email || user.role === "admin") return;
     try {
@@ -124,7 +138,7 @@ export default function App() {
         }),
       });
       const data = await res.json();
-      
+
       if (!res.ok) {
         exibirPopup(data.error || "Erro no login", "erro");
         return;
@@ -135,11 +149,11 @@ export default function App() {
       // CORREÇÃO AQUI: Salvar o objeto completo para o "Bem-vindo de volta"
       localStorage.setItem(
         "gt3_remember",
-        JSON.stringify({ 
-          email: data.email, 
+        JSON.stringify({
+          email: data.email,
           dataNasc: data.data_nascimento,
-          nome: data.nome,     // Agora salva o nome
-          formacao: data.formacao // Agora salva a formação (id)
+          nome: data.nome, // Agora salva o nome
+          formacao: data.formacao, // Agora salva a formação (id)
         }),
       );
 
@@ -281,20 +295,57 @@ export default function App() {
             </div>
 
             <div style={{ margin: "20px 0", textAlign: "center" }}>
-              {!pontoHoje?.check_in ? (
-                <button className="btn-ponto in" onClick={() => baterPonto()}>
-                  CHECK-IN
-                </button>
-              ) : !pontoHoje?.check_out ? (
-                <button
-                  className="btn-ponto out"
-                  onClick={() => setFeedback({ ...feedback, modal: true })}
-                >
-                  CHECK-OUT
-                </button>
-              ) : (
-                <div className="ponto-concluido">✔ Presença confirmada</div>
-              )}
+              {/* Validação de horários */}
+              {(() => {
+                const { isSegunda, podeCheckIn, podeCheckOut } =
+                  validarHorarioPonto();
+
+                if (!isSegunda) {
+                  return (
+                    <div className="info-banner warning">
+                      ⚠️ O registro de frequência só abre às segundas-feiras.
+                    </div>
+                  );
+                }
+
+                if (!pontoHoje?.check_in) {
+                  return (
+                    <button
+                      className="btn-ponto in"
+                      onClick={() => baterPonto()}
+                      disabled={!podeCheckIn}
+                      style={{
+                        opacity: podeCheckIn ? 1 : 0.5,
+                        cursor: podeCheckIn ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {podeCheckIn ? "CHECK-IN" : "Check-in encerrado (20:30)"}
+                    </button>
+                  );
+                }
+
+                if (!pontoHoje?.check_out) {
+                  return (
+                    <button
+                      className="btn-ponto out"
+                      onClick={() => setFeedback({ ...feedback, modal: true })}
+                      disabled={!podeCheckOut}
+                      style={{
+                        opacity: podeCheckOut ? 1 : 0.5,
+                        cursor: podeCheckOut ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {podeCheckOut
+                        ? "CHECK-OUT"
+                        : "Aguarde até o prazo mínimo pra Check-Out (22:00)"}
+                    </button>
+                  );
+                }
+
+                return (
+                  <div className="ponto-concluido">✔ Presença confirmada</div>
+                );
+              })()}
             </div>
             <p className="usability-info">
               Seu registro será processado de acordo com o horário do servidor

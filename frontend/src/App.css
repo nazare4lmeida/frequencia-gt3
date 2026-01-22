@@ -615,3 +615,15 @@ input:disabled {
     display: none; /* Esconde o relógio no mobile para sobrar espaço */
   }
 }
+
+/* Efeito de hover nos avatares */
+.avatar-option:hover {
+  transform: scale(1.1);
+  background: rgba(20, 184, 166, 0.1) !important;
+}
+
+/* Garante que o input-modern desabilitado no perfil não confunda o aluno */
+input:disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+}

@@ -6,3 +6,8 @@ export const FORMACOES = [
   { id: "ia-gen", nome: "IA Generativa", tag: "AI" },
   { id: "ia-soft", nome: "IA + Soft Skills", tag: "SOFT" },
 ];
+
+// Sugestão: Função rápida para pegar o nome da formação
+export const getNomeFormacao = (id) => {
+  return FORMACOES.find(f => f.id === id)?.nome || "Não informada";
+};

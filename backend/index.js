@@ -46,7 +46,6 @@ app.post('/api/login', async (req, res) => {
     let aluno;
 
     if (!alunos || alunos.length === 0) {
-      // Registro inicial incluindo a formação escolhida
       const { data: novoAluno, error: insertError } = await supabase
         .from('alunos')
         .insert([{ 
@@ -65,7 +64,6 @@ app.post('/api/login', async (req, res) => {
         return res.status(401).json({ error: 'Data de nascimento incorreta.' });
       }
 
-      // Atualiza formação se o aluno já existia mas não tinha uma definida
       if (formacao && !aluno.formacao) {
         await supabase.from('alunos').update({ formacao }).eq('id', aluno.id);
         aluno.formacao = formacao;
@@ -79,14 +77,19 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Atualizar CPF do Aluno (Página de Perfil)
+// APRIMORADO: Atualizar Perfil (Nome, CPF e Avatar)
 app.put('/api/aluno/perfil', async (req, res) => {
-  const { id, cpf } = req.body;
+  const { id, nome, cpf, avatar } = req.body;
   try {
     const { error } = await supabase
       .from('alunos')
-      .update({ cpf })
+      .update({ 
+        nome, 
+        cpf, 
+        avatar // Certifique-se de que esta coluna existe no Supabase
+      })
       .eq('id', id);
+    
     if (error) throw error;
     res.json({ msg: 'Dados atualizados com sucesso!' });
   } catch (err) {
@@ -147,23 +150,26 @@ app.post('/api/ponto', async (req, res) => {
 // ADMINISTRAÇÃO
 // ==========================================
 
-// Busca individual por Nome, CPF ou Email
+// MELHORADO: Busca por termo (Nome, CPF ou Email) ignorando caixa alta/baixa
 app.get('/api/admin/busca', async (req, res) => {
   const { termo } = req.query;
+  if (!termo) return res.json([]);
+
   try {
     const { data, error } = await supabase
       .from('alunos')
       .select('*')
-      .or(`nome.ilike.%${termo}%,cpf.eq.${termo},email.eq.${termo}`);
+      .or(`nome.ilike.%${termo}%,cpf.ilike.%${termo}%,email.ilike.%${termo}%`);
     
     if (error) throw error;
     res.json(data);
   } catch (err) {
+    console.error('ERRO BUSCA ADMIN:', err);
     res.status(500).json({ error: 'Erro na busca de alunos.' });
   }
 });
 
-// Relatório por Turma com Presenças
+// Relatório por Turma
 app.get('/api/admin/relatorio/:formacao', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -177,6 +183,7 @@ app.get('/api/admin/relatorio/:formacao', async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (err) {
+    console.error('ERRO RELATORIO ADMIN:', err);
     res.status(500).json({ error: 'Erro ao gerar relatório da turma.' });
   }
 });

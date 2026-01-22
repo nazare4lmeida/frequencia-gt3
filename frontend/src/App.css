@@ -1,212 +1,272 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* =========================================================
-   1. CONFIGURAÇÃO DE TEMA (Tailwind v4)
+   1. DESIGN SYSTEM - VARIÁVEIS (Mantendo suas cores)
    ========================================================= */
-@theme {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-success: hsl(var(--success));
-  --color-success-foreground: hsl(var(--success-foreground));
-  --color-warning: hsl(var(--warning));
-  --color-warning-foreground: hsl(var(--warning-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+:root {
+  --background: 220 27% 98%;
+  --foreground: 222 84% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 84% 10%;
+  --primary: 172 78% 21%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --success: 160 84% 39%;
+  --success-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --radius: 1rem;
+  --header-bg: 0 0% 100% / 0.85;
 }
 
-/* =========================================================
-   2. BASE (variáveis + reset)
-   ========================================================= */
-@layer base {
-  :root {
-    --background: 220 27% 98%;
-    --foreground: 222 84% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 84% 10%;
-    --primary: 172 78% 21%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --success: 160 84% 39%;
-    --success-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --header-bg: 0 0% 100% / 0.85;
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.07);
-  }
-
-  .dark {
-    --background: 222 84% 5%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    --primary: 172 50% 35%;
-    --secondary: 217 33% 17%;
-    --border: 217 33% 20%;
-    --header-bg: 222 84% 5% / 0.9;
-  }
-
-  * {
-    border-color: hsl(var(--border));
-  }
-
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-  }
+.dark {
+  --background: 222 84% 5%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --primary: 172 50% 35%;
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --border: 217 33% 20%;
+  --muted-foreground: 215 20% 65%;
+  --header-bg: 222 84% 5% / 0.9;
 }
 
 /* =========================================================
-   3. UTILITIES (⚠️ obrigatoriamente aqui)
+   2. ESTILOS BASE
    ========================================================= */
-@layer utilities {
-  .glass {
-    background: hsl(var(--card) / 0.8);
-    backdrop-filter: blur(24px);
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-color: hsl(var(--border));
+}
 
-  .glass-header {
-    background: hsl(var(--header-bg));
-    backdrop-filter: blur(12px);
-  }
-
-  .shadow-card {
-    box-shadow: var(--shadow-md);
-  }
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s infinite;
-  }
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "Plus Jakarta Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease;
 }
 
 /* =========================================================
-   4. COMPONENTES / LAYOUT
+   3. CLASSES UTILITÁRIAS (SUBSTITUTOS DO TAILWIND)
    ========================================================= */
-@layer components {
-  .app-wrapper {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+.glass {
+  background: hsl(var(--card) / 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid hsl(var(--border));
+}
 
-  header {
-    @apply glass-header border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50;
-  }
-
-  .content-grid {
-    @apply flex-1 p-6 grid gap-6 max-w-6xl mx-auto w-full;
-  }
-
-  .aula-card {
-    @apply glass p-8 rounded-2xl border shadow-card flex flex-col items-center justify-center text-center;
-  }
-
-  .historico-container {
-    @apply glass p-6 rounded-2xl border shadow-card overflow-x-auto;
-  }
-
-  .btn-ponto {
-    @apply px-10 py-5 rounded-full font-bold text-xl transition-all active:scale-95 shadow-md;
-  }
-
-  .btn-ponto.in {
-    @apply bg-success text-success-foreground hover:opacity-90;
-  }
-
-  .btn-ponto.out {
-    @apply bg-destructive text-destructive-foreground hover:opacity-90;
-  }
-
-  .historico-table {
-    @apply w-full border-collapse text-sm;
-  }
-
-  .historico-table th {
-    @apply p-3 border-b text-muted-foreground font-medium uppercase text-left;
-  }
-
-  .historico-table td {
-    @apply p-3 border-b;
-  }
-
-  .modal-overlay {
-    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4;
-  }
-
-  .modal-content {
-    @apply glass p-8 rounded-3xl border shadow-xl max-w-sm w-full animate-fade-in;
-  }
-
-  .custom-popup {
-    @apply fixed top-4 right-4 px-6 py-3 rounded-xl shadow-lg z-[200] font-bold animate-slide-in-right;
-  }
-
-  .custom-popup.sucesso {
-    @apply bg-success text-success-foreground;
-  }
-
-  .custom-popup.erro {
-    @apply bg-destructive text-destructive-foreground;
-  }
-
-  .login-container {
-    @apply min-h-screen flex items-center justify-center p-4;
-  }
-
-  .login-card {
-    @apply glass p-8 rounded-3xl border shadow-2xl w-full max-w-xs flex flex-col gap-4 animate-fade-in;
-  }
-
-  .login-card input {
-    @apply w-full p-3 rounded-xl border bg-background/50 outline-none focus:ring-2 focus:ring-primary;
-  }
-
-  .btn-primary {
-    @apply bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:opacity-90;
-  }
-
-  .btn-secondary {
-    @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-lg text-sm;
-  }
+.glass-header {
+  background: hsl(var(--header-bg));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* =========================================================
-   5. ANIMAÇÕES
+   4. COMPONENTES DO PORTAL
    ========================================================= */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
-  50% { box-shadow: 0 0 0 10px hsl(var(--primary) / 0); }
+
+.app-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-@keyframes fade-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+header {
+  height: 70px;
+  padding: 0 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
-@keyframes slide-in-right {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+.content-grid {
+  flex: 1;
+  padding: 2rem;
+  display: grid;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.aula-card {
+  padding: 3rem;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.historico-container {
+  padding: 2rem;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+/* BOTÕES */
+.btn-ponto {
+  padding: 1.5rem 3rem;
+  border-radius: 50px;
+  font-weight: 800;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+  color: white;
+}
+
+.btn-ponto:active { transform: scale(0.95); }
+
+.btn-ponto.in { background-color: hsl(var(--success)); }
+.btn-ponto.out { background-color: hsl(var(--destructive)); }
+
+.btn-primary {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0.8rem 1.5rem;
+  border-radius: 0.8rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  padding: 0.5rem 1rem;
+  border-radius: 0.6rem;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+}
+
+/* TABELA */
+.historico-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.historico-table th {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 2px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.historico-table td {
+  padding: 1rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* MODAIS E POPUPS */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal-content {
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  max-width: 400px;
+  width: 100%;
+  animation: fadeIn 0.3s ease;
+}
+
+.custom-popup {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  padding: 1rem 2rem;
+  border-radius: 1rem;
+  color: white;
+  font-weight: 700;
+  z-index: 200;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+  animation: slideIn 0.4s ease;
+}
+
+.custom-popup.sucesso { background-color: hsl(var(--success)); }
+.custom-popup.erro { background-color: hsl(var(--destructive)); }
+
+/* LOGIN */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.login-card {
+  padding: 2.5rem;
+  border-radius: 2rem;
+  width: 100%;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+}
+
+input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid hsl(var(--border));
+  background-color: transparent;
+  color: inherit;
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: 2px solid hsl(var(--primary));
+}
+
+/* ANIMAÇÕES */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(23, 84, 76, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(23, 84, 76, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(23, 84, 76, 0); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
 }

@@ -24,14 +24,13 @@ export default function Login({
 
   return (
     <div className="login-container">
-      <button className="btn-action-circle theme-toggle" onClick={toggleTheme}>
+      {/* Botão de Tema Reposicionado via classe theme-toggle */}
+      <button className="btn-action-circle theme-toggle" onClick={toggleTheme} style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}>
         {isDarkMode ? "☀️" : "🌙"}
       </button>
 
       <div className="login-card">
-        <div className="logo-container">
-          <div className="logo-badge">GT 3.0</div>
-        </div>
+        {/* Removido o logo-container com GT 3.0 que ficava acima do h1 */}
 
         <h1>Registro de Frequência</h1>
         <p className="subtitle">Geração Tech 3.0</p>
@@ -39,7 +38,8 @@ export default function Login({
         {dadosSalvos ? (
           <div className="welcome-back">
             <p>● Bem-vindo de volta,</p>
-            <div className="user-name-badge">{dadosSalvos.nome}</div>
+            {/* Correção: Se o nome não existir, mostra o email para não ficar vazio */}
+            <div className="user-name-badge">{dadosSalvos.nome || dadosSalvos.email}</div>
             <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>
               Turma: {FORMACOES.find(f => f.id === dadosSalvos.formacao)?.nome || "Não definida"}
             </p>

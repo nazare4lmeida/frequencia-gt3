@@ -4,10 +4,10 @@
 :root {
   --bg-deep: #0f172a;       /* Fundo profundo das referências */
   --card-bg: #1e293b;       /* Fundo dos cards/containers */
-  --teal-primary: #108a7c;  /* Teal da marca Geração Tech */
-  --teal-hover: #0b776e;    /* Hover mais escuro para botões */
-  --text-main: #f8fafc;     /* Branco suave para leitura */
-  --text-dim: #94a3b8;      /* Cinza para textos secundários */
+  --teal-primary: #0b5c52;  /* Teal da marca Geração Tech */
+  --teal-hover: #06433e;    /* Hover mais escuro para botões */
+  --text-main: #f8fafcdd;     /* Branco suave para leitura */
+  --text-dim: #778496;      /* Cinza para textos secundários */
   --border-subtle: rgba(255, 255, 255, 0.05);
   --radius-sm: 8px;
   --radius-lg: 16px;
@@ -363,12 +363,12 @@ body:not(.dark) .stat-card {
 
 .btn-ponto.out {
   background-color: transparent;
-  border: 1px solid #f87171;
-  color: #f87171;
+  border: 1px solid #8f3737;
+  color: #be4e4e;
 }
 
 .btn-ponto.out:hover {
-  background-color: #f87171;
+  background-color: #a33030;
   color: white;
 }
 
@@ -415,7 +415,7 @@ body:not(.dark) .stat-card {
 
 /* Destaque para Faltas em vermelho sutil */
 .stat-value.faltas {
-  color: #f87171;
+  color: #9d3131;
 }
 
 .text-success {
@@ -515,8 +515,8 @@ body:not(.dark) .stat-card {
   animation: slideIn 0.3s ease;
 }
 
-.custom-popup.sucesso { background: var(--teal-primary); color: white; }
-.custom-popup.erro { background: #ef4444; color: white; }
+.custom-popup.sucesso { background: var(--teal-primary); color: rgba(255, 255, 255, 0.884); }
+.custom-popup.erro { background: #a02d2d; color: rgba(255, 255, 255, 0.826); }
 
 @keyframes slideIn {
   from { transform: translateY(20px); opacity: 0; }
@@ -626,4 +626,40 @@ input:disabled {
 input:disabled {
   cursor: not-allowed;
   border-style: dashed;
+}
+
+.theme-toggle-login {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--teal-primary);
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-login:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px var(--teal-primary);
+}
+
+/* Ajuste da Badge de Turma */
+.turma-badge {
+  background: rgba(0, 128, 128, 0.1);
+  color: var(--teal-primary);
+  padding: 5px 15px;
+  border-radius: 20px;
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-top: 5px;
 }

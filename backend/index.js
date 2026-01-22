@@ -168,7 +168,7 @@ app.post('/api/ponto', async (req, res) => {
     }
   } catch (err) {
     console.error('ERRO PONTO:', err);
-    res.status(500).json({ error: 'Erro ao registrar frequência.' });
+    res.status(500).json({ error: 'Você só pode registrar frequência nas Segundas.' });
   }
 });
 

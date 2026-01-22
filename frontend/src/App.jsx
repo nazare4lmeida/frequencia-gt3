@@ -163,7 +163,7 @@ export default function App() {
       setFeedback({ nota: 0, revisao: "", modal: false });
       carregarHistorico();
     } catch {
-      exibirPopup("Erro ao registrar ponto", "erro");
+      exibirPopup("Erro ao registrar frequência.", "erro");
     }
   };
 
@@ -234,7 +234,7 @@ export default function App() {
               title="Alternar Tema"
               onClick={() => setIsDarkMode(!isDarkMode)}
             >
-              {isDarkMode ? "☀️" : "🌙"}
+              {isDarkMode ? "○" : "●"}
             </button>
             <button
               className="btn-secondary"
@@ -319,7 +319,7 @@ export default function App() {
                     key={i}
                     style={{
                       marginBottom: "5px",
-                      color: "var(--teal-primary)",
+                      color: "#f8fafcdd",
                     }}
                   >
                     ● {data} — 19:00h

@@ -26,7 +26,7 @@ export default function Login({
     <div className="login-container">
       {/* Botão de Tema Reposicionado via classe theme-toggle */}
       <button className="btn-action-circle theme-toggle" onClick={toggleTheme} style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}>
-        {isDarkMode ? "☀️" : "🌙"}
+        {isDarkMode ? "○" : "●"}
       </button>
 
       <div className="login-card">

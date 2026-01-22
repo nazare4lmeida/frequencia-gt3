@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 /* =========================================================
-   CONFIGURAÇÃO DE TEMA (Obrigatório para o Tailwind v4)
+   1. CONFIGURAÇÃO DE TEMA (Obrigatório Tailwind v4)
    ========================================================= */
 @theme {
   --color-background: hsl(var(--background));
@@ -32,24 +32,28 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
-  /* Importante para corrigir o erro 'unknown utility class font-sans' */
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
-  /* Registrando sua animação no tema */
   --animate-pulse-glow: pulse-glow 2s infinite;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-in-right: slide-in-right 0.5s ease-out;
 
   @keyframes pulse-glow {
-    0%, 100% {
-      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
-    }
-    50% {
-      box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
-    }
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+    50% { box-shadow: 0 0 0 10px hsl(var(--primary) / 0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
 }
 
 /* =========================================================
-   DESIGN SYSTEM - Seu Código Original de Variáveis
+   2. VARIÁVEIS DE DESIGN (CSS PURO)
    ========================================================= */
 @layer base {
   :root {
@@ -57,32 +61,19 @@
     --foreground: 222 84% 10%;
     --card: 0 0% 100%;
     --card-foreground: 222 84% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 84% 10%;
     --primary: 172 78% 21%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    --accent: 172 78% 21%;
-    --accent-foreground: 0 0% 100%;
     --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
-    --warning: 45 93% 47%;
-    --warning-foreground: 0 0% 0%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 172 78% 21%;
-    --radius: 1rem;
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.07), 0 2px 4px -2px hsl(0 0% 0% / 0.07);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.08), 0 4px 6px -4px hsl(0 0% 0% / 0.08);
-    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.1), 0 8px 10px -6px hsl(0 0% 0% / 0.1);
-    --accent-glow: 172 78% 21% / 0.15;
     --header-bg: 0 0% 100% / 0.85;
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.07);
   }
 
   .dark {
@@ -91,19 +82,12 @@
     --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
     --primary: 172 50% 35%;
-    --primary-foreground: 0 0% 100%;
     --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
     --border: 217 33% 20%;
     --header-bg: 222 84% 5% / 0.9;
   }
-}
 
-@layer base {
   * { border-color: hsl(var(--border)); }
-  html { scroll-behavior: smooth; }
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: "Plus Jakarta Sans", system-ui, sans-serif;
@@ -111,31 +95,27 @@
 }
 
 /* =========================================================
-   UTILITIES - Seus Utilitários Originais
+   3. UTILITÁRIOS (DEFINIDOS ANTES DO USO NO LAYOUT)
    ========================================================= */
-@layer utilities {
-  .glass {
-    background: hsl(var(--card) / 0.8);
-    backdrop-filter: blur(24px);
-  }
-  .glass-header {
-    background: hsl(var(--header-bg));
-    backdrop-filter: blur(12px);
-  }
-  .shadow-card { box-shadow: var(--shadow-md); }
-  .shadow-card-hover { box-shadow: var(--shadow-lg); }
-  .accent-glow { background: hsl(var(--accent-glow)); }
-  .gradient-accent {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(172 78% 28%));
-  }
-  .text-balance { text-wrap: balance; }
+.glass {
+  background: hsl(var(--card) / 0.8);
+  backdrop-filter: blur(24px);
 }
 
+.glass-header {
+  background: hsl(var(--header-bg));
+  backdrop-filter: blur(12px);
+}
+
+.shadow-card { box-shadow: var(--shadow-md); }
+
 /* =========================================================
-   CLASSES DE LAYOUT (Necessárias para o App.jsx e Login.jsx)
+   4. CLASSES DE LAYOUT (COMPONENTES)
    ========================================================= */
 .app-wrapper {
-  @apply min-h-screen flex flex-col;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 header {
@@ -147,7 +127,7 @@ header {
 }
 
 .aula-card {
-  @apply glass p-8 rounded-2xl border shadow-card flex flex-col items-center justify-center;
+  @apply glass p-8 rounded-2xl border shadow-card flex flex-col items-center justify-center text-center;
 }
 
 .historico-container {
@@ -155,43 +135,29 @@ header {
 }
 
 .btn-ponto {
-  @apply px-10 py-5 rounded-full font-bold text-xl transition-all active:scale-95 shadow-md cursor-pointer;
+  @apply px-10 py-5 rounded-full font-bold text-xl transition-all active:scale-95 shadow-md;
 }
 .btn-ponto.in { @apply bg-success text-success-foreground hover:opacity-90; }
 .btn-ponto.out { @apply bg-destructive text-destructive-foreground hover:opacity-90; }
 
-.historico-table {
-  @apply w-full border-collapse text-sm;
-}
-.historico-table th { @apply p-3 border-b text-muted-foreground font-medium uppercase; }
+.animate-pulse-glow { animation: pulse-glow 2s infinite; }
+
+.historico-table { @apply w-full border-collapse text-sm; }
+.historico-table th { @apply p-3 border-b text-muted-foreground font-medium uppercase text-left; }
 .historico-table td { @apply p-3 border-b; }
 
-.modal-overlay {
-  @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4;
-}
-.modal-content {
-  @apply glass p-8 rounded-3xl border shadow-xl max-w-sm w-full;
-}
-
-.input-notes {
-  @apply w-full mt-4 p-3 rounded-xl border bg-background/50 outline-none focus:ring-2 focus:ring-primary;
-}
-
-.rating-group button {
-  @apply w-10 h-10 rounded-lg border font-bold transition-all;
-}
-.rating-group button.active { @apply bg-primary text-white border-primary; }
+.modal-overlay { @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4; }
+.modal-content { @apply glass p-8 rounded-3xl border shadow-xl max-w-sm w-full animate-fade-in; }
 
 .custom-popup {
-  @apply fixed top-4 right-4 px-6 py-3 rounded-xl shadow-lg z-[200] font-bold animate-in slide-in-from-right;
+  @apply fixed top-4 right-4 px-6 py-3 rounded-xl shadow-lg z-[200] font-bold animate-slide-in-right;
 }
 .custom-popup.sucesso { @apply bg-success text-success-foreground; }
 .custom-popup.erro { @apply bg-destructive text-destructive-foreground; }
 
-/* Login */
 .login-container { @apply min-h-screen flex items-center justify-center p-4; }
-.login-card { @apply glass p-8 rounded-3xl border shadow-2xl w-full max-w-xs flex flex-col gap-4; }
-.login-card input { @apply w-full p-3 rounded-xl border bg-background/50 outline-none; }
+.login-card { @apply glass p-8 rounded-3xl border shadow-2xl w-full max-w-xs flex flex-col gap-4 animate-fade-in; }
+.login-card input { @apply w-full p-3 rounded-xl border bg-background/50 outline-none focus:ring-2 focus:ring-primary; }
 
 .btn-primary { @apply bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:opacity-90; }
 .btn-secondary { @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-lg text-sm; }

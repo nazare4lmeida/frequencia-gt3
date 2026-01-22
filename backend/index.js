@@ -30,16 +30,18 @@ app.post('/api/login', async (req, res) => {
     return res.status(400).json({ error: 'Dados obrigatórios ausentes.' });
   }
 
+  const emailFormatado = email.trim().toLowerCase();
+
   // Admin fixo
-  if (email === 'admin@gt3.com' && dataNascimento === '2026-01-01') {
-    return res.json({ id: 'admin', nome: 'Administrador', role: 'admin', email });
+  if (emailFormatado === 'admin@gt3.com' && dataNascimento === '2026-01-01') {
+    return res.json({ nome: 'Administrador', role: 'admin', email: emailFormatado });
   }
 
   try {
     const { data: alunos, error } = await supabase
       .from('alunos')
       .select('*')
-      .eq('email', email.trim().toLowerCase());
+      .eq('email', emailFormatado);
 
     if (error) throw error;
 
@@ -49,7 +51,7 @@ app.post('/api/login', async (req, res) => {
       const { data: novoAluno, error: insertError } = await supabase
         .from('alunos')
         .insert([{ 
-          email: email.trim().toLowerCase(), 
+          email: emailFormatado, 
           data_nascimento: dataNascimento,
           formacao: formacao 
         }])
@@ -65,7 +67,7 @@ app.post('/api/login', async (req, res) => {
       }
 
       if (formacao && !aluno.formacao) {
-        await supabase.from('alunos').update({ formacao }).eq('id', aluno.id);
+        await supabase.from('alunos').update({ formacao }).eq('email', emailFormatado);
         aluno.formacao = formacao;
       }
     }
@@ -73,22 +75,17 @@ app.post('/api/login', async (req, res) => {
     res.json({ ...aluno, role: 'aluno' });
   } catch (err) {
     console.error('ERRO NO LOGIN:', err);
-    res.status(500).json({ error: 'Erro interno no servidor de login.' });
+    res.status(500).json({ error: 'Erro interno no servidor.' });
   }
 });
 
-// APRIMORADO: Atualizar Perfil (Nome, CPF e Avatar)
 app.put('/api/aluno/perfil', async (req, res) => {
-  const { id, nome, cpf, avatar } = req.body;
+  const { email, nome, cpf, avatar } = req.body; 
   try {
     const { error } = await supabase
       .from('alunos')
-      .update({ 
-        nome, 
-        cpf, 
-        avatar // Certifique-se de que esta coluna existe no Supabase
-      })
-      .eq('id', id);
+      .update({ nome, cpf, avatar })
+      .eq('email', email.trim().toLowerCase());
     
     if (error) throw error;
     res.json({ msg: 'Dados atualizados com sucesso!' });
@@ -102,32 +99,36 @@ app.put('/api/aluno/perfil', async (req, res) => {
 // REGISTRAR PONTO
 // ==========================================
 app.post('/api/ponto', async (req, res) => {
-  const { aluno_id, nota, revisao } = req.body;
+  const { email, nota, revisao } = req.body; 
   const { data: hoje, hora: agora } = getBrasiliaTime();
 
   try {
+    // Busca se já existe check-in hoje para este aluno_email
     const { data: pontoExistente } = await supabase
       .from('presencas')
       .select('*')
-      .eq('aluno_id', aluno_id)
+      .eq('aluno_email', email) 
       .eq('data', hoje)
       .single();
 
     if (!pontoExistente) {
+      // Realiza Check-in
       const { error } = await supabase
         .from('presencas')
         .insert([{ 
-          aluno_id, 
+          aluno_email: email, 
           data: hoje, 
           check_in: agora 
         }]);
       if (error) throw error;
       return res.json({ msg: 'Check-in realizado com sucesso!' });
     } else {
+      // Verifica se já fez check-out
       if (pontoExistente.check_out) {
         return res.status(400).json({ error: 'Ponto de hoje já concluído.' });
       }
 
+      // Realiza Check-out (filtrando pelo ID int8 da própria tabela presencas)
       const { error } = await supabase
         .from('presencas')
         .update({ 
@@ -135,68 +136,41 @@ app.post('/api/ponto', async (req, res) => {
           feedback_nota: nota,
           feedback_texto: revisao 
         })
-        .eq('id', pontoExistente.id);
+        .eq('id', pontoExistente.id); 
         
       if (error) throw error;
       return res.json({ msg: 'Check-out realizado!' });
     }
   } catch (err) {
     console.error('ERRO AO BATER PONTO:', err);
-    res.status(500).json({ error: 'Falha ao registrar ponto.' });
+    res.status(500).json({ error: 'Erro ao processar registro de ponto.' });
   }
 });
 
 // ==========================================
-// ADMINISTRAÇÃO
+// ADMIN E HISTÓRICO
 // ==========================================
-
-// MELHORADO: Busca por termo (Nome, CPF ou Email) ignorando caixa alta/baixa
 app.get('/api/admin/busca', async (req, res) => {
   const { termo } = req.query;
   if (!termo) return res.json([]);
-
   try {
     const { data, error } = await supabase
       .from('alunos')
       .select('*')
       .or(`nome.ilike.%${termo}%,cpf.ilike.%${termo}%,email.ilike.%${termo}%`);
-    
     if (error) throw error;
     res.json(data);
   } catch (err) {
-    console.error('ERRO BUSCA ADMIN:', err);
-    res.status(500).json({ error: 'Erro na busca de alunos.' });
+    res.status(500).json({ error: 'Erro na busca.' });
   }
 });
 
-// Relatório por Turma
-app.get('/api/admin/relatorio/:formacao', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('alunos')
-      .select(`
-        id, nome, email, cpf, formacao,
-        presencas ( data, check_in, check_out )
-      `)
-      .eq('formacao', req.params.formacao);
-
-    if (error) throw error;
-    res.json(data);
-  } catch (err) {
-    console.error('ERRO RELATORIO ADMIN:', err);
-    res.status(500).json({ error: 'Erro ao gerar relatório da turma.' });
-  }
-});
-
-// ==========================================
-// HISTÓRICO E SAÚDE
-// ==========================================
-app.get('/api/historico/aluno/:id', async (req, res) => {
+app.get('/api/historico/aluno/:email', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('presencas')
       .select('*')
-      .eq('aluno_id', req.params.id)
+      .eq('aluno_email', req.params.email) 
       .order('data', { ascending: false });
 
     if (error) throw error;

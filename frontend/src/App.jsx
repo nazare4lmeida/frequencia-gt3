@@ -327,7 +327,7 @@ export default function App() {
                     key={i}
                     style={{
                       marginBottom: "5px",
-                      color: "#f8fafcdd",
+                      color: "var(--text-normal)",
                     }}
                   >
                     ● {data} — 18:30h

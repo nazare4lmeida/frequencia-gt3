@@ -11,7 +11,7 @@ const supabase = createClient(
   process.env.SUPABASE_KEY
 );
 
-// Helper para pegar data e hora de Brasília (Independente de onde o servidor está)
+// Helper para pegar data e hora de Brasília
 const getBrasiliaTime = () => {
   const agora = new Date();
   const brasilia = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
@@ -21,10 +21,10 @@ const getBrasiliaTime = () => {
 };
 
 // ==========================================
-// LOGIN (ADMIN / ALUNO)
+// LOGIN E PERFIL
 // ==========================================
 app.post('/api/login', async (req, res) => {
-  const { email, dataNascimento, nome } = req.body;
+  const { email, dataNascimento, formacao } = req.body;
 
   if (!email || !dataNascimento) {
     return res.status(400).json({ error: 'Dados obrigatórios ausentes.' });
@@ -46,12 +46,13 @@ app.post('/api/login', async (req, res) => {
     let aluno;
 
     if (!alunos || alunos.length === 0) {
+      // Registro inicial incluindo a formação escolhida
       const { data: novoAluno, error: insertError } = await supabase
         .from('alunos')
         .insert([{ 
           email: email.trim().toLowerCase(), 
-          nome: nome || 'Aluno GT', 
-          data_nascimento: dataNascimento 
+          data_nascimento: dataNascimento,
+          formacao: formacao 
         }])
         .select();
 
@@ -59,10 +60,15 @@ app.post('/api/login', async (req, res) => {
       aluno = novoAluno[0];
     } else {
       aluno = alunos[0];
-      // Comparação rigorosa de data para evitar erros de fuso do DB
       const dataFormatadaDb = aluno.data_nascimento.toString().split('T')[0];
       if (dataFormatadaDb !== dataNascimento) {
         return res.status(401).json({ error: 'Data de nascimento incorreta.' });
+      }
+
+      // Atualiza formação se o aluno já existia mas não tinha uma definida
+      if (formacao && !aluno.formacao) {
+        await supabase.from('alunos').update({ formacao }).eq('id', aluno.id);
+        aluno.formacao = formacao;
       }
     }
 
@@ -73,8 +79,24 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Atualizar CPF do Aluno (Página de Perfil)
+app.put('/api/aluno/perfil', async (req, res) => {
+  const { id, cpf } = req.body;
+  try {
+    const { error } = await supabase
+      .from('alunos')
+      .update({ cpf })
+      .eq('id', id);
+    if (error) throw error;
+    res.json({ msg: 'Dados atualizados com sucesso!' });
+  } catch (err) {
+    console.error('ERRO PERFIL:', err);
+    res.status(500).json({ error: 'Erro ao atualizar perfil.' });
+  }
+});
+
 // ==========================================
-// REGISTRAR PONTO (CHECK-IN / CHECK-OUT)
+// REGISTRAR PONTO
 // ==========================================
 app.post('/api/ponto', async (req, res) => {
   const { aluno_id, nota, revisao } = req.body;
@@ -113,14 +135,55 @@ app.post('/api/ponto', async (req, res) => {
         .eq('id', pontoExistente.id);
         
       if (error) throw error;
-      return res.json({ msg: 'Check-out realizado! Até amanhã.' });
+      return res.json({ msg: 'Check-out realizado!' });
     }
   } catch (err) {
     console.error('ERRO AO BATER PONTO:', err);
-    res.status(500).json({ error: 'Falha ao registrar ponto no banco.' });
+    res.status(500).json({ error: 'Falha ao registrar ponto.' });
   }
 });
 
+// ==========================================
+// ADMINISTRAÇÃO
+// ==========================================
+
+// Busca individual por Nome, CPF ou Email
+app.get('/api/admin/busca', async (req, res) => {
+  const { termo } = req.query;
+  try {
+    const { data, error } = await supabase
+      .from('alunos')
+      .select('*')
+      .or(`nome.ilike.%${termo}%,cpf.eq.${termo},email.eq.${termo}`);
+    
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro na busca de alunos.' });
+  }
+});
+
+// Relatório por Turma com Presenças
+app.get('/api/admin/relatorio/:formacao', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('alunos')
+      .select(`
+        id, nome, email, cpf, formacao,
+        presencas ( data, check_in, check_out )
+      `)
+      .eq('formacao', req.params.formacao);
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar relatório da turma.' });
+  }
+});
+
+// ==========================================
+// HISTÓRICO E SAÚDE
+// ==========================================
 app.get('/api/historico/aluno/:id', async (req, res) => {
   try {
     const { data, error } = await supabase

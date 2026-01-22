@@ -79,6 +79,22 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+app.get('/api/aluno/perfil/:email', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('alunos')
+      .select('*')
+      .eq('email', req.params.email.toLowerCase())
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('ERRO AO BUSCAR PERFIL:', err);
+    res.status(500).json({ error: 'Erro ao carregar dados do perfil.' });
+  }
+});
+
 app.put('/api/aluno/perfil', async (req, res) => {
   const { email, nome, cpf, avatar } = req.body; 
   try {

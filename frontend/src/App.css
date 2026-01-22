@@ -1,394 +1,214 @@
-/* =========================================================
-   IMPORTAÇÃO E VARIÁVEIS
-   ========================================================= */
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
-:root {
-  --bg: #f8faff;
-  --header-bg: rgba(255, 255, 255, 0.85);
-  --card: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --accent: #0b635b;
-  --accent-hover: #0f766e;
-  --accent-glow: rgba(13, 148, 136, 0.25);
-  --border: #e2e8f0;
-  --radius-lg: 24px;
-  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
-}
-
-body.dark {
-  --bg: #0f172a;
-  --header-bg: rgba(15, 23, 42, 0.9);
-  --card: #1e293b;
-  --text-main: #f1f5f9;
-  --text-muted: #759aaf;
-  --accent: #146459;
-  --border: #2c3747;
-  --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* =========================================================
-   BASE
+   DESIGN SYSTEM - Sistema de Ponto
    ========================================================= */
-body {
-  margin: 0;
-  font-family: "Plus Jakarta Sans", sans-serif;
-  background-color: var(--bg);
-  color: var(--text-main);
-  transition: background 0.3s ease;
-}
 
-.app-wrapper {
-  min-height: 100vh;
-  padding-bottom: 60px;
-}
+@layer base {
+  :root {
+    /* Core Colors */
+    --background: 220 27% 98%;
+    --foreground: 222 84% 10%;
 
-/* =========================================================
-   LOGIN
-   ========================================================= */
-.login-container {
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  position: relative;
-}
+    /* Card surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 10%;
 
-.theme-toggle {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 10;
-}
+    /* Popover/Modal */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 10%;
 
-.login-card {
-  width: 100%;
-  max-width: 400px;
-  padding: 40px;
-  text-align: center;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-}
+    /* Primary */
+    --primary: 172 78% 21%;
+    --primary-foreground: 0 0% 100%;
 
-#loginForm {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 24px;
-}
+    /* Secondary */
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-#loginForm input {
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-main);
-  font-family: inherit;
-  outline: none;
-}
+    /* Muted */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-/* =========================================================
-   HEADER & BRAND
-   ========================================================= */
-header {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 5%;
-  background: var(--header-bg);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-}
+    /* Accent */
+    --accent: 172 78% 21%;
+    --accent-foreground: 0 0% 100%;
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+    /* Success */
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
 
-.brand h1 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-}
+    /* Warning */
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 0%;
 
-.brand h1 span {
-  color: var(--accent);
-}
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-/* =========================================================
-   CONTENT GRID
-   ========================================================= */
-.content-grid {
-  max-width: 900px;
-  margin: 40px auto;
-  padding: 0 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
+    /* UI Elements */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 172 78% 21%;
 
-.aula-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow);
-  margin-bottom: 30px;
-  text-align: center;
-}
+    --radius: 1rem;
 
-/* =========================================================
-   BOTÕES & AÇÕES
-   ========================================================= */
-.btn-primary {
-  padding: 14px 24px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.07),
+                 0 2px 4px -2px hsl(0 0% 0% / 0.07);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.08),
+                 0 4px 6px -4px hsl(0 0% 0% / 0.08);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.1),
+                 0 8px 10px -6px hsl(0 0% 0% / 0.1);
 
-.btn-primary:hover {
-  background: var(--accent-hover);
-  box-shadow: 0 4px 12px var(--accent-glow);
-}
+    /* Effects */
+    --accent-glow: 172 78% 21% / 0.15;
 
-.btn-secondary {
-  padding: 8px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text-main);
-  border-radius: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  height: 38px;
-  transition: 0.3s;
-}
+    /* Header */
+    --header-bg: 0 0% 100% / 0.85;
 
-.btn-secondary:hover {
-  border-color: var(--accent);
-}
+    /* Sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5% 26%;
+    --sidebar-primary: 172 78% 21%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 96%;
+    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 172 78% 21%;
+  }
 
-/* Estilo unificado para o botão de ponto (Check-in/Out) */
-.btn-ponto {
-    width: 100%;
-    max-width: 300px; /* Mantém proporcional como na imagem */
-    padding: 20px;
-    font-size: 1.1rem;
-    font-weight: 800;
-    border-radius: 15px;
-    cursor: pointer;
-    border: none;
-    margin: 20px auto 0 auto;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
-    display: block;
-}
+  .dark {
+    --background: 222 84% 5%;
+    --foreground: 210 40% 98%;
 
-.btn-ponto.in {
-    background: #10b981;
-    color: white;
-}
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
 
-.btn-ponto.out {
-    background: #f59e0b;
-    color: white;
-}
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
 
-.btn-ponto:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
-}
+    --primary: 172 50% 35%;
+    --primary-foreground: 0 0% 100%;
 
-/* =========================================================
-   HISTÓRICO
-   ========================================================= */
-.historico-container {
-  background: transparent;
-}
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
 
-.historico-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--card);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  font-size: 0.9rem;
-}
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-.historico-table th,
-.historico-table td {
-  padding: 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
+    --accent: 172 50% 35%;
+    --accent-foreground: 0 0% 100%;
 
-.historico-table th {
-  background: var(--accent-glow);
-  color: var(--accent);
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
+    --success: 160 60% 40%;
+    --success-foreground: 0 0% 100%;
 
-.historico-table tr:hover td {
-  background: var(--bg);
-}
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 0%;
 
-/* =========================================================
-   MODAL & FEEDBACK
-   ========================================================= */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
 
-.modal-content {
-  width: 90%;
-  max-width: 450px;
-  background: var(--card);
-  border-radius: var(--radius-lg);
-  padding: 30px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-  position: relative;
-  animation: slideUp 0.3s ease-out;
-}
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 172 50% 35%;
 
-.modal-content textarea {
-  width: 100%;
-  min-height: 100px;
-  margin: 15px 0;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-main);
-  font-family: inherit;
-  resize: none;
-}
+    --accent-glow: 172 50% 35% / 0.25;
 
-.rating-group {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 15px;
-}
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.25),
+                 0 2px 4px -2px hsl(0 0% 0% / 0.25);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3),
+                 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.4),
+                 0 8px 10px -6px hsl(0 0% 0% / 0.4);
 
-.rating-group button {
-  flex: 1;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--text-main);
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
+    --header-bg: 222 84% 5% / 0.9;
 
-.rating-group button.active {
-  background: var(--accent) !important;
-  color: white !important;
-}
-
-/* =========================================================
-   EXTRAS (ALARME, POPUP, STATUS)
-   ========================================================= */
-.custom-popup {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 15px 30px;
-  border-radius: 12px;
-  z-index: 3000;
-  font-weight: 600;
-  color: white;
-  min-width: 260px;
-  text-align: center;
-  animation: slideIn 0.3s forwards;
-}
-
-.custom-popup.sucesso { background: #16a34a; }
-.custom-popup.erro { background: #dc2626; }
-
-.alarme-box {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #f1c40f;
-    padding: 12px 20px;
-    border-radius: 50px;
-    z-index: 10000;
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    color: #000;
-    font-weight: 700;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-}
-
-.ponto-concluido {
-    margin-top: 20px;
-    padding: 15px;
-    background: var(--accent-glow);
-    color: var(--accent);
-    border-radius: 12px;
-    font-weight: 700;
-    text-align: center;
-    border: 1px dashed var(--accent);
-}
-
-/* Animações */
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* =========================================================
-   RESPONSIVIDADE
-   ========================================================= */
-@media (max-width: 768px) {
-  header {
-    flex-direction: column;
-    gap: 15px;
-    padding: 1.5rem;
+    --sidebar-background: 240 6% 10%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 172 50% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 172 50% 35%;
   }
 }
 
-@media (max-width: 480px) {
-  .aula-card, .modal-content { padding: 24px; }
-  .btn-ponto { font-size: 1rem; padding: 16px; }
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  }
+}
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+
+@layer utilities {
+  .glass {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(24px);
+  }
+
+  .glass-header {
+    background: hsl(var(--header-bg));
+    backdrop-filter: blur(12px);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-card-hover {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .accent-glow {
+    background: hsl(var(--accent-glow));
+  }
+
+  .gradient-accent {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(172 78% 28%)
+    );
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* =========================================================
+   CUSTOM ANIMATIONS
+   ========================================================= */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
 }

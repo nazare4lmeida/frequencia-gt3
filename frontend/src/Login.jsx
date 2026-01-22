@@ -25,7 +25,11 @@ export default function Login({
   return (
     <div className="login-container">
       {/* Botão de Tema Reposicionado via classe theme-toggle */}
-      <button className="btn-action-circle theme-toggle" onClick={toggleTheme} style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}>
+      <button
+        className="btn-action-circle theme-toggle"
+        onClick={toggleTheme}
+        style={{ position: "fixed", top: "20px", right: "20px", zIndex: 1000 }}
+      >
         {isDarkMode ? "○" : "●"}
       </button>
 
@@ -36,12 +40,20 @@ export default function Login({
         <p className="subtitle">Geração Tech 3.0</p>
 
         {dadosSalvos ? (
-          <div className="welcome-back">
-            <p>● Bem-vindo(a) de volta,{' '}</p>
-            {/* Correção: Se o nome não existir, mostra o email para não ficar vazio */}
-            <div className="user-name-badge">{dadosSalvos.nome || dadosSalvos.email}</div>
-            <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>
-              Turma: {FORMACOES.find(f => f.id === dadosSalvos.formacao)?.nome || 'Não definida'}
+          <div className="welcome-back" style={{ textAlign: "center" }}>
+            <p style={{ display: "inline-block", margin: 0 }}>
+              ● Bem-vindo(a) de volta,
+            </p>
+            <div className="user-name-badge">
+              {dadosSalvos.nome || dadosSalvos.email}
+            </div>
+            <p
+              className="text-muted"
+              style={{ fontSize: "0.8rem", marginBottom: "15px" }}
+            >
+              Turma:{" "}
+              {FORMACOES.find((f) => f.id === dadosSalvos.formacao)?.nome ||
+                "Não definida"}
             </p>
 
             <button onClick={handleLogin} className="btn-ponto in">
@@ -67,20 +79,26 @@ export default function Login({
               value={form.dataNasc}
               onChange={handleChange("dataNasc")}
             />
-            
-            <select 
-              className="input-modern" 
-              value={form.formacao} 
+
+            <select
+              className="input-modern"
+              value={form.formacao}
               onChange={handleChange("formacao")}
-              style={{ appearance: 'none' }}
+              style={{ appearance: "none" }}
             >
               <option value="">Selecione sua Formação</option>
-              {FORMACOES.map(f => (
-                <option key={f.id} value={f.id}>{f.nome}</option>
+              {FORMACOES.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nome}
+                </option>
               ))}
             </select>
 
-            <button onClick={handleLogin} className="btn-ponto in" disabled={!form.formacao}>
+            <button
+              onClick={handleLogin}
+              className="btn-ponto in"
+              disabled={!form.formacao}
+            >
               Entrar no Portal
             </button>
           </div>

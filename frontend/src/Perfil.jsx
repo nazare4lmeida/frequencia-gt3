@@ -12,7 +12,7 @@ export default function Perfil({ user, setUser, onVoltar }) {
   // Usamos user.email no seed para a imagem ser estável e única por aluno
   const modelosAvatar = [
     { id: "lorelei", nome: "Casual", url: `https://api.dicebear.com/7.x/lorelei/svg?seed=${user.email}` },
-    { id: "persona", nome: "Persona", url: `https://api.dicebear.com/7.x/persona/svg?seed=${user.email}` },
+    { id: "persona", nome: "Persona", url: `https://api.dicebear.com/7.x/personas/svg?seed=${user.email}` },
     { id: "open-peeps", nome: "Sketch", url: `https://api.dicebear.com/7.x/open-peeps/svg?seed=${user.email}` },
     { id: "big-smile", nome: "Expressivo", url: `https://api.dicebear.com/7.x/big-smile/svg?seed=${user.email}` },
     { id: "bottts-neutral", nome: "Tech", url: `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${user.email}` }

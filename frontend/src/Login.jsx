@@ -7,100 +7,165 @@ export default function Login({
   dadosSalvos,
   setDadosSalvos,
   isDarkMode,
-  setIsDarkMode
+  setIsDarkMode,
 }) {
+  const toggleTheme = () => {
+    setIsDarkMode((prev) => !prev);
+  };
+
+  const handleUseAnotherAccount = () => {
+    localStorage.removeItem("gt3_remember");
+    setDadosSalvos(null);
+    setForm({ email: "", dataNasc: "" });
+  };
+
+  const handleChange = (field) => (e) => {
+    setForm({ ...form, [field]: e.target.value });
+  };
+
   return (
     <div className="login-container">
-      {/* Botão de Tema no Topo (Direita conforme o X) */}
+      {/* Botão de tema */}
       <button
-        className="btn-action-circle theme-toggle"
-        style={{ position: 'fixed', top: '20px', right: '20px' }}
-        onClick={() => setIsDarkMode(!isDarkMode)}
+        className="btn-action-circle"
+        style={{ position: "fixed", top: 20, right: 20 }}
+        onClick={toggleTheme}
         title="Alternar Tema"
       >
         {isDarkMode ? "☀️" : "🌙"}
       </button>
 
-      <div className="login-card glass shadow-xl">
-        <div className="brand-logo" style={{ justifyContent: 'center', marginBottom: '10px' }}>
-          <div className="logo-circle">GT 3.0</div>
-        </div>
-        
-        <div className="login-header">
-          <h1 className="brand-text" style={{ fontSize: '1.8rem' }}>
-            Registro de Frequência
-          </h1>
-          <p className="login-subtitle">Geração Tech 3.0</p>
+      <div className="login-card">
+        {/* Logo / Marca */}
+        <div style={{ marginBottom: "16px" }}>
+          <div
+            style={{
+              backgroundColor: "var(--teal-dark)",
+              color: "#fff",
+              padding: "8px 16px",
+              borderRadius: "10px",
+              fontWeight: 800,
+              display: "inline-block",
+              boxShadow: "0 0 15px rgba(20, 184, 166, 0.25)",
+            }}
+          >
+            GT 3.0
+          </div>
         </div>
 
-        <div id="loginForm" style={{ width: '100%' }}>
-          {dadosSalvos ? (
+        {/* Título */}
+        <h1 style={{ fontSize: "1.8rem", marginBottom: "4px" }}>
+          Registro de Frequência
+        </h1>
+        <p style={{ color: "var(--muted)", marginBottom: "24px" }}>
+          Geração Tech 3.0
+        </p>
+
+        {/* Conteúdo */}
+        {dadosSalvos ? (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ marginBottom: "6px" }}>
+              ● Bem-vindo de volta,
+            </p>
+
             <div
-              className="remember-box"
-              style={{ textAlign: "center" }}
+              style={{
+                display: "inline-block",
+                marginBottom: "16px",
+                padding: "6px 14px",
+                borderRadius: "999px",
+                backgroundColor: "#1e293b",
+                border: "1px solid hsl(var(--border))",
+                fontWeight: 600,
+              }}
             >
-              <p style={{ color: 'hsl(var(--foreground))', marginBottom: '5px' }}>
-                ● Bem-vindo de volta,
-              </p>
-              <div className="user-badge" style={{ display: 'inline-block', marginBottom: '15px' }}>
-                {dadosSalvos.nome}
-              </div>
-
-              <button
-                className="btn-primary w-full"
-                style={{ marginTop: "10px" }}
-                onClick={handleLogin}
-              >
-                Confirmar e Entrar
-              </button>
-
-              <button
-                className="btn-ghost"
-                style={{ fontSize: "0.75rem", marginTop: "15px", color: 'hsl(var(--muted-foreground))' }}
-                onClick={() => {
-                  localStorage.removeItem("gt3_remember");
-                  setDadosSalvos(null);
-                  setForm({ email: "", dataNasc: "" });
-                }}
-              >
-                Usar outra conta
-              </button>
+              {dadosSalvos.nome}
             </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="form-group">
-                <input
-                  type="email"
-                  placeholder="E-mail cadastrado"
-                  value={form.email}
-                  onChange={(e) =>
-                    setForm({ ...form, email: e.target.value })
-                  }
-                />
-              </div>
 
-              <div className="form-group">
-                <input
-                  type="date"
-                  value={form.dataNasc}
-                  onChange={(e) =>
-                    setForm({ ...form, dataNasc: e.target.value })
-                  }
-                />
-              </div>
+            <button
+              onClick={handleLogin}
+              style={primaryButton}
+            >
+              Confirmar e Entrar
+            </button>
 
-              <button className="btn-primary w-full" onClick={handleLogin}>
-                Entrar no Portal
-              </button>
+            <button
+              onClick={handleUseAnotherAccount}
+              style={ghostButton}
+            >
+              Usar outra conta
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div style={{ marginBottom: "12px" }}>
+              <input
+                type="email"
+                placeholder="E-mail cadastrado"
+                value={form.email}
+                onChange={handleChange("email")}
+                style={inputStyle}
+              />
             </div>
-          )}
-        </div>
 
-        {/* Informações de Usabilidade (Cinza) */}
-        <p className="usability-info" style={{ marginTop: '20px', fontSize: '0.75rem' }}>
-          Utilize suas credenciais cadastradas no programa. Em caso de primeiro acesso, sua senha padrão é sua data de nascimento.
+            <div style={{ marginBottom: "20px" }}>
+              <input
+                type="date"
+                value={form.dataNasc}
+                onChange={handleChange("dataNasc")}
+                style={inputStyle}
+              />
+            </div>
+
+            <button
+              onClick={handleLogin}
+              style={primaryButton}
+            >
+              Entrar no Portal
+            </button>
+          </div>
+        )}
+
+        <p className="usability-info">
+          Utilize suas credenciais cadastradas no programa. Em caso de primeiro
+          acesso, sua senha padrão é sua data de nascimento.
         </p>
       </div>
     </div>
   );
 }
+
+/* ========================= */
+/* Estilos auxiliares (JS)   */
+/* ========================= */
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: "8px",
+  border: "1px solid hsl(var(--border))",
+  backgroundColor: "#020617",
+  color: "#fff",
+  fontSize: "0.9rem",
+};
+
+const primaryButton = {
+  width: "100%",
+  height: "44px",
+  borderRadius: "10px",
+  backgroundColor: "var(--teal-brand)",
+  color: "#fff",
+  fontWeight: 700,
+  border: "none",
+  cursor: "pointer",
+  marginBottom: "10px",
+};
+
+const ghostButton = {
+  width: "100%",
+  background: "none",
+  border: "none",
+  color: "#94a3b8",
+  fontSize: "0.75rem",
+  cursor: "pointer",
+};

@@ -1,231 +1,409 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+/* ========================= */
+/* EXTENSÕES PARA LOGIN */
+/* (SEM REMOVER NADA EXISTENTE) */
+/* ========================= */
 
-/* =========================================================
-   1. DESIGN SYSTEM - VARIÁVEIS MODERNIZADAS
-   ========================================================= */
-:root {
-  /* Teal Moderno */
-  --teal-primary: 172 78% 21%; /* Dark Teal */
-  --teal-brand: 172 66% 50%;   /* Modern Teal */
-  --teal-light: 172 40% 90%;   /* Soft Teal para cards */
-  
-  --background: 220 27% 98%;
-  --foreground: 222 84% 10%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 84% 10%;
-  --primary: var(--teal-primary);
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --success: 160 84% 39%;
-  --border: 214 32% 91%;
-  --radius-lg: 1.5rem;
-  --header-bg: 0 0% 100% / 0.85;
-}
-
-.dark {
-  --background: 222 84% 5%;
-  --foreground: 210 40% 98%;
-  --card: 222 47% 11%;
-  --card-foreground: 210 40% 98%;
-  --primary: 172 50% 45%;
-  --muted-foreground: 215 20% 65%;
-  --header-bg: 222 84% 5% / 0.9;
-  --border: 217 33% 20%;
-}
-
-/* =========================================================
-   2. ESTILOS BASE E RESET
-   ========================================================= */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: "Plus Jakarta Sans", sans-serif;
-  transition: background-color 0.3s ease;
-  line-height: 1.6;
-}
-
-/* =========================================================
-   3. LOGO E IDENTIDADE (TEAL MODERN)
-   ========================================================= */
-.brand-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo-circle {
-  background-color: hsl(var(--teal-brand));
+/* Inputs do Login */
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background-color: #020617;
   color: white;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-weight: 800;
-  font-size: 1.2rem;
-  box-shadow: 0 4px 10px hsla(172, 66%, 50%, 0.3);
+  font-size: 0.9rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-card input:focus {
+  outline: none;
+  border-color: var(--teal-brand);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2);
+}
+
+/* Botão primário (Entrar / Confirmar) */
+.btn-primary {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  background-color: var(--teal-brand);
+  color: white;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: var(--teal-dark);
+  transform: scale(1.02);
+}
+
+/* Botão ghost (Usar outra conta) */
+.btn-ghost {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: color 0.2s;
+}
+
+.btn-ghost:hover {
+  color: white;
+}
+
+/* Badge do usuário lembrado */
+.user-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background-color: #1e293b;
+  border: 1px solid hsl(var(--border));
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+/* Box do usuário lembrado */
+.remember-box {
+  text-align: center;
+}
+
+/* Cabeçalho do login */
+.login-header {
+  margin-bottom: 24px;
 }
 
 .brand-text {
-  font-weight: 700;
-  color: hsl(var(--teal-primary));
-  font-size: 1.1rem;
+  font-size: 1.8rem;
+  margin-bottom: 4px;
 }
 
-.brand-text span {
-  color: hsl(var(--muted-foreground));
-  font-weight: 400;
-  font-size: 0.9rem;
-  display: block;
+.login-subtitle {
+  color: var(--muted);
 }
 
-/* Badge de Identificação (Aluno/Admin) */
-.user-badge {
-  background-color: hsl(var(--teal-light));
-  color: hsl(var(--teal-primary));
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 5px;
-}
-
-/* =========================================================
-   4. LAYOUT E COMPONENTES
-   ========================================================= */
-
-header {
-  height: 80px;
-  padding: 0 2rem;
+/* Logo circular GT 3.0 */
+.brand-logo {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: hsl(var(--header-bg));
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.logo-circle {
+  background-color: var(--teal-dark);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 800;
+  box-shadow: 0 0 15px rgba(20, 184, 166, 0.25);
+}
+
+/* Ajuste fino do texto de usabilidade */
+.login-card .usability-info {
+  margin-top: 20px;
+  text-align: center;
+}
+
+/* Pequena melhoria visual no botão de tema */
+.btn-action-circle:hover {
+  background-color: #334155;
+}
+/* ========================= */
+/* COMPLEMENTOS FINAIS */
+/* CSS PURO – SEM FRAMEWORK */
+/* Colar no FINAL do App.css */
+/* ========================= */
+
+/* Header com efeito glass */
+.glass-header {
+  background: rgba(10, 15, 25, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid hsl(var(--border));
 }
 
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px; /* Melhor espaçamento entre botões do topo */
+/* Sombra padrão de cards */
+.shadow-card {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
 }
 
-.content-grid {
-  padding: 2rem;
-  max-width: 1000px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-/* Card Principal de Ponto */
-.aula-card {
-  background-color: hsl(var(--card));
-  padding: 3rem 2rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-/* Ajuste de Usabilidade (Texto Cinza) */
-.usability-info {
-  color: hsl(var(--muted-foreground));
+/* Texto utilitário */
+.text-muted {
+  color: var(--muted);
   font-size: 0.85rem;
-  max-width: 400px;
-  margin: 0 auto;
+}
+
+.text-teal-modern {
+  color: var(--teal-brand);
+  font-weight: 700;
+}
+
+/* Botão secundário */
+.btn-secondary {
+  background: #1e293b;
+  border: 1px solid hsl(var(--border));
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #334155;
+  transform: scale(1.02);
+}
+
+/* Grid de estatísticas */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  padding: 1.2rem;
   text-align: center;
 }
 
-/* =========================================================
-   5. BOTÕES (HARMONIZAÇÃO E TAMANHO)
-   ========================================================= */
+.stat-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
 
-/* Botão de Check-in Proporcional */
-.btn-ponto {
-  width: 240px; /* Tamanho fixo para não ficar gigante */
-  height: 80px;
-  border-radius: 40px;
+.stat-value {
+  font-size: 1.5rem;
   font-weight: 800;
-  font-size: 1.4rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 20px -5px hsla(160, 84%, 39%, 0.4);
 }
 
-.btn-ponto:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 25px -5px hsla(160, 84%, 39%, 0.5);
+/* Status */
+.text-success {
+  color: hsl(var(--success));
 }
 
-.btn-ponto.in { background-color: hsl(var(--success)); }
-.btn-ponto.out { background-color: hsl(var(--destructive)); }
-
-/* Botões de Ação Redondos (Topo) */
-.btn-action-circle {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
-  color: hsl(var(--foreground));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
+/* Animação de destaque (check-in / alarme) */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 rgba(20, 184, 166, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(20, 184, 166, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(20, 184, 166, 0.4);
+  }
 }
-
-.btn-action-circle:hover {
-  background-color: hsl(var(--secondary));
-  border-color: hsl(var(--primary));
-  color: hsl(var(--primary));
-}
-
-/* =========================================================
-   6. ANIMAÇÕES E EXTRAS
-   ========================================================= */
 
 .animate-pulse-glow {
-  animation: pulseGlow 2s infinite;
+  animation: pulseGlow 1.6s infinite;
 }
 
-@keyframes pulseGlow {
-  0% { box-shadow: 0 0 0 0 hsl(var(--success) / 0.4); }
-  70% { box-shadow: 0 0 0 15px hsl(var(--success) / 0); }
-  100% { box-shadow: 0 0 0 0 hsl(var(--success) / 0); }
+/* Histórico – alinhamentos utilitários */
+.text-center {
+  text-align: center;
 }
 
-/* Estilo para a tabela de histórico */
-.historico-container {
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal-content {
   background-color: hsl(var(--card));
-  padding: 1.5rem;
-  border-radius: var(--radius-lg);
   border: 1px solid hsl(var(--border));
+  border-radius: 1.5rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
 }
 
-.historico-table th {
-  color: hsl(var(--muted-foreground));
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  padding: 1rem;
-  border-bottom: 2px solid hsl(var(--border));
+/* Área de feedback (textarea) */
+.input-notes {
+  width: 100%;
+  min-height: 90px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background-color: #020617;
+  color: white;
+  resize: none;
+  font-size: 0.85rem;
+}
+
+.input-notes:focus {
+  outline: none;
+  border-color: var(--teal-brand);
+}
+
+/* Grupo de avaliação */
+.rating-group button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid hsl(var(--border));
+  background: #1e293b;
+  color: white;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.rating-group button.active {
+  background-color: var(--teal-brand);
+  border-color: var(--teal-brand);
+}
+
+/* Alarme */
+.alarme-box {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 150;
+  text-align: center;
+}
+
+.alarme-box button {
+  margin-top: 10px;
+  background-color: var(--teal-brand);
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+/* ========================= */
+/* RESPONSIVIDADE */
+/* ========================= */
+
+/* Tablets e telas médias */
+@media (max-width: 1024px) {
+  .content-grid {
+    padding: 1.5rem;
+  }
+
+  header {
+    padding: 0 1.5rem;
+  }
+
+  .aula-card,
+  .historico-container {
+    padding: 2rem;
+  }
+
+  .btn-ponto {
+    width: 180px;
+    height: 56px;
+    font-size: 1.1rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    height: auto;
+    padding: 1rem;
+  }
+
+  .brand-logo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .nav-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .content-grid {
+    padding: 1rem;
+  }
+
+  .aula-card,
+  .historico-container {
+    padding: 1.5rem;
+    border-radius: 1.2rem;
+  }
+
+  .btn-ponto {
+    width: 100%;
+    max-width: 260px;
+    height: 54px;
+    font-size: 1.05rem;
+  }
+
+  .stats-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .stat-divider {
+    display: none;
+  }
+
+  .login-card {
+    padding: 2rem 1.5rem;
+    border-radius: 1.5rem;
+  }
+
+  .login-card h1 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Mobile pequeno */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 1.5rem 1.2rem;
+  }
+
+  .btn-action-circle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    height: 42px;
+    font-size: 0.85rem;
+  }
+
+  .historico-table th,
+  .historico-table td {
+    padding: 8px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Tabela responsiva (scroll horizontal no mobile) */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-responsive table {
+  min-width: 500px;
 }

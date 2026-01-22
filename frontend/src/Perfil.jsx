@@ -15,8 +15,8 @@ export default function Perfil({ user, setUser, onVoltar }) {
   ];
 
   const salvarPerfil = async () => {
-    // Validação básica de CPF antes de tentar salvar
-    if (cpf && cpf.length < 11) {
+    // Validação básica de CPF
+    if (cpf && cpf.replace(/\D/g, "").length < 11) {
       alert("Por favor, insira um CPF válido.");
       return;
     }
@@ -27,7 +27,7 @@ export default function Perfil({ user, setUser, onVoltar }) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          id: user.id, 
+          email: user.email, // ALTERAÇÃO CRÍTICA: Identifica o aluno pela PK (email)
           nome: nome.trim(), 
           cpf: cpf.trim(),
           avatar 
@@ -37,32 +37,33 @@ export default function Perfil({ user, setUser, onVoltar }) {
       const data = await res.json();
 
       if (res.ok) {
-        // 1. Criamos o objeto atualizado
+        // 1. Criamos o objeto atualizado mantendo os dados antigos e sobrepondo os novos
         const usuarioAtualizado = { ...user, nome: nome.trim(), cpf: cpf.trim(), avatar };
         
-        // 2. Atualizamos o estado global do App.jsx para refletir a mudança no Header e Boas-vindas
+        // 2. Atualizamos o estado global do App.jsx
         setUser(usuarioAtualizado);
         
-        // 3. ATUALIZAÇÃO CRÍTICA: Atualizar a sessão para que o F5 não resete os dados
+        // 3. Atualizar a sessão para que o F5 não resete os dados
         const sessionStr = localStorage.getItem("gt3_session");
         if (sessionStr) {
           const session = JSON.parse(sessionStr);
           session.userData = usuarioAtualizado;
+          session.timestamp = Date.now(); // Renova o tempo da sessão
           localStorage.setItem("gt3_session", JSON.stringify(session));
         }
 
-        // 4. Opcional: Atualizar também o "gt3_remember" caso você queira que o nome mude no Login
+        // 4. Atualizar também o "gt3_remember" para o próximo login
         const rememberStr = localStorage.getItem("gt3_remember");
         if (rememberStr) {
           const remember = JSON.parse(rememberStr);
           localStorage.setItem("gt3_remember", JSON.stringify({ 
             ...remember, 
-            email: usuarioAtualizado.email 
+            nome: usuarioAtualizado.nome // Agora salva o nome atualizado para o login
           }));
         }
 
         alert("Perfil atualizado com sucesso!");
-        onVoltar(); // Retorna para a home após salvar
+        onVoltar(); // Retorna para a home
       } else {
         alert(data.error || "Erro ao salvar informações.");
       }
@@ -76,9 +77,9 @@ export default function Perfil({ user, setUser, onVoltar }) {
 
   return (
     <div className="app-wrapper">
-      <div className="shadow-card" style={{ maxWidth: '650px', margin: '0 auto' }}>
+      <div className="shadow-card" style={{ maxWidth: '650px', margin: '20px auto' }}>
         <div className="card-header-info" style={{ textAlign: 'center' }}>
-          <h2>Meu Perfil Tech</h2>
+          <h2 className="text-teal-modern">Meu Perfil Tech</h2>
           
           <div style={{ margin: '20px auto', width: '100px', height: '100px', borderRadius: '50%', background: 'var(--bg-deep)', border: '2px solid var(--teal-primary)', overflow: 'hidden' }}>
             <img 
@@ -90,19 +91,19 @@ export default function Perfil({ user, setUser, onVoltar }) {
         </div>
 
         <div style={{ marginBottom: '25px' }}>
-          <label className="stat-label" style={{ textAlign: 'center' }}>Escolha seu Personagem</label>
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
+          <label className="stat-label" style={{ textAlign: 'center', display: 'block' }}>Escolha seu Personagem</label>
+          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '10px' }}>
             {modelosAvatar.map((m) => (
               <div 
                 key={m.id}
                 onClick={() => setAvatar(m.id)}
                 style={{
                   cursor: 'pointer',
-                  padding: '5px',
+                  padding: '8px',
                   borderRadius: '12px',
                   border: avatar === m.id ? '2px solid var(--teal-primary)' : '2px solid transparent',
-                  background: 'rgba(255,255,255,0.05)',
-                  transition: 'all 0.2s'
+                  background: avatar === m.id ? 'rgba(0, 128, 128, 0.1)' : 'rgba(255,255,255,0.05)',
+                  transition: 'all 0.3s ease'
                 }}
               >
                 <img src={m.url} alt={m.nome} style={{ width: '45px', height: '45px' }} />
@@ -112,34 +113,48 @@ export default function Perfil({ user, setUser, onVoltar }) {
         </div>
 
         <div className="login-form">
-          <label className="stat-label">Nome Completo</label>
-          <input 
-            type="text" 
-            className="input-modern" 
-            value={nome} 
-            onChange={(e) => setNome(e.target.value)} 
-          />
+          <div style={{ marginBottom: '15px' }}>
+            <label className="stat-label">Nome Completo</label>
+            <input 
+              type="text" 
+              className="input-modern" 
+              placeholder="Seu nome"
+              value={nome} 
+              onChange={(e) => setNome(e.target.value)} 
+            />
+          </div>
 
-          <label className="stat-label">CPF</label>
-          <input 
-            type="text" 
-            className="input-modern" 
-            placeholder="000.000.000-00"
-            value={cpf}
-            onChange={(e) => setCpf(e.target.value)}
-          />
+          <div style={{ marginBottom: '15px' }}>
+            <label className="stat-label">CPF</label>
+            <input 
+              type="text" 
+              className="input-modern" 
+              placeholder="000.000.000-00"
+              value={cpf}
+              onChange={(e) => setCpf(e.target.value)}
+            />
+          </div>
 
-          <label className="stat-label">E-mail (Apenas Visualização)</label>
-          <input type="text" className="input-modern" value={user.email} disabled style={{ opacity: 0.5 }} />
+          <div style={{ marginBottom: '25px' }}>
+            <label className="stat-label">E-mail (Chave de Acesso)</label>
+            <input 
+                type="text" 
+                className="input-modern" 
+                value={user.email} 
+                disabled 
+                style={{ opacity: 0.6, cursor: 'not-allowed', backgroundColor: 'rgba(0,0,0,0.1)' }} 
+            />
+            <small style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>O e-mail não pode ser alterado.</small>
+          </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
             <button 
               className="btn-ponto in" 
               onClick={salvarPerfil} 
-              disabled={loading}
+              disabled={loading || !nome} 
               style={{ flex: 2 }}
             >
-              {loading ? "Salvando..." : "Salvar Alterações"}
+              {loading ? "Processando..." : "Salvar Alterações"}
             </button>
             <button className="btn-secondary" onClick={onVoltar} style={{ flex: 1 }}>
               Voltar

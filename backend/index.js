@@ -23,6 +23,7 @@ const getBrasiliaTime = () => {
 // ==========================================
 // LOGIN E PERFIL
 // ==========================================
+
 app.post('/api/login', async (req, res) => {
   const { email, dataNascimento, formacao } = req.body;
 
@@ -48,6 +49,7 @@ app.post('/api/login', async (req, res) => {
     let aluno;
 
     if (!alunos || alunos.length === 0) {
+      // Cadastro automático se não existir
       const { data: novoAluno, error: insertError } = await supabase
         .from('alunos')
         .insert([{ 
@@ -61,11 +63,13 @@ app.post('/api/login', async (req, res) => {
       aluno = novoAluno[0];
     } else {
       aluno = alunos[0];
+      // Validação de data de nascimento
       const dataFormatadaDb = aluno.data_nascimento.toString().split('T')[0];
       if (dataFormatadaDb !== dataNascimento) {
         return res.status(401).json({ error: 'Data de nascimento incorreta.' });
       }
 
+      // Atualiza formação se necessário usando email como chave
       if (formacao && !aluno.formacao) {
         await supabase.from('alunos').update({ formacao }).eq('email', emailFormatado);
         aluno.formacao = formacao;
@@ -75,16 +79,17 @@ app.post('/api/login', async (req, res) => {
     res.json({ ...aluno, role: 'aluno' });
   } catch (err) {
     console.error('ERRO NO LOGIN:', err);
-    res.status(500).json({ error: 'Erro interno no servidor.' });
+    res.status(500).json({ error: 'Erro interno no servidor de login.' });
   }
 });
 
+// Busca dados para a tela de Perfil
 app.get('/api/aluno/perfil/:email', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('alunos')
       .select('*')
-      .eq('email', req.params.email.toLowerCase())
+      .eq('email', req.params.email.trim().toLowerCase())
       .single();
 
     if (error) throw error;
@@ -95,8 +100,14 @@ app.get('/api/aluno/perfil/:email', async (req, res) => {
   }
 });
 
+// Salva alterações do perfil usando EMAIL como referência (PK)
 app.put('/api/aluno/perfil', async (req, res) => {
   const { email, nome, cpf, avatar } = req.body; 
+  
+  if (!email) {
+    return res.status(400).json({ error: 'E-mail é necessário para identificar o aluno.' });
+  }
+
   try {
     const { error } = await supabase
       .from('alunos')
@@ -107,44 +118,42 @@ app.put('/api/aluno/perfil', async (req, res) => {
     res.json({ msg: 'Dados atualizados com sucesso!' });
   } catch (err) {
     console.error('ERRO PERFIL:', err);
-    res.status(500).json({ error: 'Erro ao atualizar perfil.' });
+    res.status(500).json({ error: 'Erro interno ao salvar perfil.' });
   }
 });
 
 // ==========================================
-// REGISTRAR PONTO
+// REGISTRAR PONTO (USANDO aluno_email)
 // ==========================================
 app.post('/api/ponto', async (req, res) => {
-  const { email, nota, revisao } = req.body; 
+  const { aluno_id, nota, revisao } = req.body; // aluno_id aqui é o email vindo do front
   const { data: hoje, hora: agora } = getBrasiliaTime();
 
   try {
-    // Busca se já existe check-in hoje para este aluno_email
     const { data: pontoExistente } = await supabase
       .from('presencas')
       .select('*')
-      .eq('aluno_email', email) 
+      .eq('aluno_email', aluno_id) 
       .eq('data', hoje)
       .single();
 
     if (!pontoExistente) {
-      // Realiza Check-in
+      // Check-in
       const { error } = await supabase
         .from('presencas')
         .insert([{ 
-          aluno_email: email, 
+          aluno_email: aluno_id, 
           data: hoje, 
           check_in: agora 
         }]);
       if (error) throw error;
-      return res.json({ msg: 'Check-in realizado com sucesso!' });
+      return res.json({ msg: 'Check-in realizado!' });
     } else {
-      // Verifica se já fez check-out
+      // Check-out
       if (pontoExistente.check_out) {
-        return res.status(400).json({ error: 'Ponto de hoje já concluído.' });
+        return res.status(400).json({ error: 'Ponto já concluído hoje.' });
       }
 
-      // Realiza Check-out (filtrando pelo ID int8 da própria tabela presencas)
       const { error } = await supabase
         .from('presencas')
         .update({ 
@@ -152,20 +161,21 @@ app.post('/api/ponto', async (req, res) => {
           feedback_nota: nota,
           feedback_texto: revisao 
         })
-        .eq('id', pontoExistente.id); 
+        .eq('id', pontoExistente.id); // 'id' de presencas é int8 e funciona aqui
         
       if (error) throw error;
       return res.json({ msg: 'Check-out realizado!' });
     }
   } catch (err) {
-    console.error('ERRO AO BATER PONTO:', err);
-    res.status(500).json({ error: 'Erro ao processar registro de ponto.' });
+    console.error('ERRO PONTO:', err);
+    res.status(500).json({ error: 'Erro ao registrar frequência.' });
   }
 });
 
 // ==========================================
 // ADMIN E HISTÓRICO
 // ==========================================
+
 app.get('/api/admin/busca', async (req, res) => {
   const { termo } = req.query;
   if (!termo) return res.json([]);
@@ -192,7 +202,6 @@ app.get('/api/historico/aluno/:email', async (req, res) => {
     if (error) throw error;
     res.json(data || []);
   } catch (err) {
-    console.error('ERRO HISTORICO:', err);
     res.status(500).json({ error: 'Erro ao carregar histórico.' });
   }
 });

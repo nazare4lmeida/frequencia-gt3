@@ -1,19 +1,16 @@
 /* ================================================= */
-/* VARIÁVEIS REFINADAS                               */
+/* 1. VARIÁVEIS E RESET (FOCO NO DARK MODE REAL)     */
 /* ================================================= */
 :root {
-  --teal-dark: #0d3d3a; /* Teal mais escuro e sóbrio */
-  --teal-brand: #14b8a6;
-  --teal-hover: #0f766e;
-  --dark-slate: #1e293b;
-  --black: #020617;
-  --white: #ffffff;
-  --gray-muted: #64748b;
-  --glass-bg: rgba(15, 23, 42, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --bg-deep: #0f172a;       /* Fundo profundo das referências */
+  --card-bg: #1e293b;       /* Fundo dos cards/containers */
+  --teal-primary: #108a7c;  /* Teal da marca Geração Tech */
+  --teal-hover: #0b776e;    /* Hover mais escuro para botões */
+  --text-main: #f8fafc;     /* Branco suave para leitura */
+  --text-dim: #94a3b8;      /* Cinza para textos secundários */
+  --border-subtle: rgba(255, 255, 255, 0.05);
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-lg: 16px;
   --transition: all 0.2s ease-in-out;
 }
 
@@ -21,120 +18,90 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Forçar Dark Mode na classe do body */
 body.dark {
-  background-color: #010409;
-  color: #e6edf3;
+  background-color: var(--bg-deep);
 }
 
 /* ================================================= */
-/* LOGIN: MENOR E MAIS LARGO (HARMONIOSO)            */
+/* 2. TELA DE LOGIN (MAIS LARGA E ORGANIZADA)        */
 /* ================================================= */
 .login-container {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: radial-gradient(circle at center, #0d3d3a33 0%, #010409 100%);
+  padding: 20px;
+  background: radial-gradient(circle at center, #14b8a610 0%, #0f172a 100%);
 }
 
 .login-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 2rem 3rem; /* Menos altura, mais largura lateral */
+  background: var(--card-bg);
+  padding: 3rem 4rem;      /* Menos altura, mais largura lateral */
+  border-radius: 20px;
   width: 100%;
-  max-width: 480px; /* Mais largo para harmonia */
+  max-width: 520px;        /* Largura harmônica conforme referência */
   text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-subtle);
 }
 
 .login-card h1 {
-  font-size: 1.4rem;
-  margin-bottom: 0.5rem;
-}
-
-.welcome-back {
-  padding: 1rem 0;
-}
-
-/* ================================================= */
-/* HEADER: AJUSTES E HORÁRIO                         */
-/* ================================================= */
-.glass-header {
-  position: fixed;
-  top: 0;
-  width: 100%;
-  height: 60px;
-  background: rgba(1, 4, 9, 0.9);
-  border-bottom: 1px solid var(--glass-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 2rem;
-  z-index: 1000;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  font-size: 0.9rem;
-  color: var(--gray-muted);
-}
-
-.nav-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* ================================================= */
-/* CONTEÚDO PRINCIPAL (SUTIL)                        */
-/* ================================================= */
-.app-wrapper {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 90px 20px 40px;
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  gap: 16px;
-}
-
-.aula-card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: 1.5rem;
-}
-
-.aula-card h2 {
-  font-size: 1.25rem;
-  margin: 0.5rem 0;
-}
-
-/* ================================================= */
-/* BOTÕES: CORES E HOVER                             */
-/* ================================================= */
-.btn-ponto {
-  width: 100%;
-  padding: 12px;
-  font-size: 1rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border-radius: 50px;
+  margin-bottom: 4px;
+  letter-spacing: -0.025em;
+}
+
+.login-card .subtitle {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+}
+
+/* Inputs da tela de login */
+.input-modern {
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: #0f172a;     /* Input escuro como no modelo base */
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 0.95rem;
+  outline: none;
   transition: var(--transition);
 }
 
+.input-modern:focus {
+  border-color: var(--teal-primary);
+  box-shadow: 0 0 0 1px var(--teal-primary);
+}
+
+/* Botão de Entrar (Padrão Referência) */
 .btn-ponto.in {
-  background-color: var(--teal-brand);
+  width: 100%;
+  padding: 14px;
+  background-color: var(--teal-primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: var(--transition);
 }
 
 .btn-ponto.in:hover {
@@ -142,22 +109,257 @@ body.dark {
   transform: translateY(-1px);
 }
 
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  margin-top: 15px;
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: 0.7;
+}
+
+.btn-ghost:hover {
+  opacity: 1;
+}
+
+.usability-info {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 2rem;
+  line-height: 1.5;
+}
+
+/* ================================================= */
+/* 3. HEADER (DISCRETO E FIXO NO TOPO)              */
+/* ================================================= */
+.glass-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px; /* Altura reduzida conforme referência */
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-circle {
+  color: var(--teal-primary);
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: -1px;
+}
+
+.brand-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.brand-text span {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--teal-primary);
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+/* Badge de Aluno/Admin sutil */
+.user-badge {
+  background: rgba(20, 184, 166, 0.1);
+  color: var(--teal-primary);
+  padding: 2px 10px;
+  border-radius: 50px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.clock {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Ações do Nav (Botões de Ícones) */
+.nav-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .btn-action-circle {
-  background: rgba(255,255,255,0.05);
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.9rem;
 }
 
 .btn-action-circle:hover {
   background: var(--teal-hover);
+  color: white;
+  border-color: var(--teal-hover);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-secondary:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* ================================================= */
-/* STATS E FALTAS                                    */
+/* 4. LAYOUT PRINCIPAL (GRID)                       */
+/* ================================================= */
+.app-wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 90px 20px 40px; /* Espaço para o header fixo */
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px; /* Coluna lateral mais estreita */
+  gap: 20px;
+}
+
+/* Card padrão do sistema */
+.shadow-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 850px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+  .glass-header {
+    padding: 0 1rem;
+  }
+}
+
+/* ================================================= */
+/* 5. CARD DE AULA E BOTÕES DE PONTO                */
+/* ================================================= */
+.card-header-info {
+  margin-bottom: 20px;
+}
+
+.card-header-info h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.text-muted {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+/* Banner de informação sutil e centralizado */
+.info-banner {
+  background: rgba(20, 184, 166, 0.05);
+  border: 1px solid rgba(20, 184, 166, 0.1);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--teal-primary);
+  text-align: center;
+  margin: 15px 0;
+}
+
+/* Botões de Ponto: Reduzidos e elegantes */
+.btn-ponto {
+  width: 100%;
+  max-width: 320px; /* Largura controlada conforme referência */
+  margin: 10px auto;
+  display: block;
+  padding: 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: var(--transition);
+}
+
+.btn-ponto.in {
+  background-color: var(--teal-primary);
+  color: white;
+  box-shadow: 0 4px 15px rgba(20, 184, 166, 0.2);
+}
+
+.btn-ponto.in:hover {
+  background-color: var(--teal-hover);
+  transform: translateY(-2px);
+}
+
+.btn-ponto.out {
+  background-color: transparent;
+  border: 1px solid #f87171;
+  color: #f87171;
+}
+
+.btn-ponto.out:hover {
+  background-color: #f87171;
+  color: white;
+}
+
+.ponto-concluido {
+  text-align: center;
+  color: var(--teal-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 10px;
+}
+
+/* ================================================= */
+/* 6. LATERAL DE ESTATÍSTICAS (SUTILEZA)            */
 /* ================================================= */
 .stats-grid {
   display: flex;
@@ -166,78 +368,135 @@ body.dark {
 }
 
 .stat-card {
-  background: rgba(47, 79, 79, 0.3);
-  border: 1px solid var(--glass-border);
-  padding: 1rem;
-  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  padding: 1.2rem;
+  border-radius: var(--radius-lg);
   text-align: center;
 }
 
 .stat-label {
-  font-size: 0.8rem;
-  color: var(--gray-muted);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   display: block;
+  margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--teal-brand);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--teal-primary);
 }
 
+/* Destaque para Faltas em vermelho sutil */
 .stat-value.faltas {
   color: #f87171;
 }
 
-/* ================================================= */
-/* ALERTAS E INFORMAÇÕES                             */
-/* ================================================= */
-.info-banner {
-  background: rgba(20, 184, 166, 0.05);
-  border: 1px solid rgba(20, 184, 166, 0.2);
-  padding: 10px 15px;
-  border-radius: 50px;
-  font-size: 0.85rem;
-  text-align: center;
-  margin: 1rem 0;
-  color: var(--teal-brand);
-}
-
-.usability-info {
-  font-size: 0.75rem;
-  color: var(--gray-muted);
-  line-height: 1.4;
-  margin-top: 1rem;
+.text-success {
+  color: var(--teal-primary);
+  font-weight: 700;
 }
 
 /* ================================================= */
-/* TABELA HISTÓRICO                                  */
+/* 7. TABELA DE HISTÓRICO                           */
 /* ================================================= */
 .historico-container {
-  margin-top: 16px;
-  padding: 1.5rem;
+  grid-column: 1 / -1; /* Ocupa a largura total em telas grandes */
+  margin-top: 10px;
+}
+
+.historico-container h3 {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
 }
 
 .historico-table {
   width: 100%;
-  font-size: 0.85rem;
+  border-collapse: collapse;
 }
 
 .historico-table th {
-  padding: 10px;
-  color: var(--gray-muted);
-  border-bottom: 1px solid var(--glass-border);
+  text-align: left;
+  padding: 12px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .historico-table td {
-  padding: 12px 10px;
+  padding: 14px 12px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.historico-table tr:hover td {
+  background: rgba(255, 255, 255, 0.01);
 }
 
 /* ================================================= */
-/* RESPONSIVIDADE                                    */
+/* 8. MODAL DE FEEDBACK (CHECK-OUT)                 */
 /* ================================================= */
-@media (max-width: 768px) {
-  .content-grid { grid-template-columns: 1fr; }
-  .login-card { padding: 2rem 1.5rem; }
-  .header-right .clock { display: none; }
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  max-width: 400px;
+  width: 90%;
+  border: 1px solid var(--border-subtle);
+}
+
+.input-notes {
+  width: 100%;
+  height: 80px;
+  background: #0f172a;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: white;
+  padding: 10px;
+  font-size: 0.85rem;
+  resize: none;
+  margin: 15px 0;
+}
+
+/* Popups de Alerta */
+.custom-popup {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 3000;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  animation: slideIn 0.3s ease;
+}
+
+.custom-popup.sucesso { background: var(--teal-primary); color: white; }
+.custom-popup.erro { background: #ef4444; color: white; }
+
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

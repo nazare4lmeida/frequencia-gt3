@@ -603,14 +603,20 @@ li:last-child {
   display: inline-block;
   background: rgba(28, 58, 55, 0.897);
   color: rgb(43, 134, 124);
-  padding: 6px 16px;
+  
+  /* DIMINUIR LARGURA: Reduzi o 16px para 8px */
+  padding: 4px 8px; 
+  
+  /* DISTÂNCIA DA VÍRGULA: Adiciona espaço antes do balão */
+  margin-left: 12px; 
+  
   border-radius: 50px;
   font-weight: 600;
   font-size: 0.9rem;
-  margin-bottom: 10px;
   border: 2px solid rgba(10, 55, 50, 0.379);
-  gap: 8px;
-  align-items: center;
+  
+  /* Alinhamento vertical caso o balão esteja subindo/descendo */
+  vertical-align: middle; 
 }
 
 /* Alinhamento para o formulário de Perfil */

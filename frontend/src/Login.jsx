@@ -41,7 +41,7 @@ export default function Login({
             {/* Correção: Se o nome não existir, mostra o email para não ficar vazio */}
             <div className="user-name-badge">{dadosSalvos.nome || dadosSalvos.email}</div>
             <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>
-              Turma: {FORMACOES.find(f => f.id === dadosSalvos.formacao)?.nome || "Não definida"}
+              Turma: {FORMACOES.find(f => f.id === dadosSalvos.formacao)?.nome || 'Não definida'}
             </p>
 
             <button onClick={handleLogin} className="btn-ponto in">

@@ -120,20 +120,29 @@ export default function App() {
         body: JSON.stringify({
           email: form.email,
           dataNascimento: form.dataNasc,
+          formacao: form.formacao, // Enviando a formação selecionada
         }),
       });
       const data = await res.json();
+      
       if (!res.ok) {
         exibirPopup(data.error || "Erro no login", "erro");
         return;
       }
+
       setUser(data);
 
-      // Salva no local storage usando os campos que o banco retorna (email e data_nascimento)
+      // CORREÇÃO AQUI: Salvar o objeto completo para o "Bem-vindo de volta"
       localStorage.setItem(
         "gt3_remember",
-        JSON.stringify({ email: data.email, dataNasc: data.data_nascimento }),
+        JSON.stringify({ 
+          email: data.email, 
+          dataNasc: data.data_nascimento,
+          nome: data.nome,     // Agora salva o nome
+          formacao: data.formacao // Agora salva a formação (id)
+        }),
       );
+
       localStorage.setItem(
         "gt3_session",
         JSON.stringify({ userData: data, timestamp: Date.now() }),
@@ -142,7 +151,6 @@ export default function App() {
       exibirPopup("Erro de conexão com o servidor", "erro");
     }
   };
-
   // AJUSTE: Bater Ponto enviando o Email
   const baterPonto = async (extra = {}) => {
     try {

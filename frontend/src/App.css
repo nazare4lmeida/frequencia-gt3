@@ -320,9 +320,9 @@ body:not(.dark) .stat-card {
   font-size: 0.8rem;
   margin-bottom: 4px;
   gap: 6px;
-  display: flex;
   align-items: center;
   margin-top: 6px;
+  padding: 0 4px;
 }
 
 /* Banner de informação sutil e centralizado */
@@ -585,21 +585,15 @@ li:last-child {
 /* Badge de Turma no Login e Perfil */
 .user-name-badge {
   display: inline-block;
-  background: rgba(102, 198, 187, 0.897);
+  background: rgba(63, 129, 121, 0.897);
   color: var(--teal-primary);
   padding: 6px 16px;
   border-radius: 50px;
   font-weight: 600;
   font-size: 0.9rem;
   margin-bottom: 10px;
-  border: 1px solid rgba(23, 174, 157, 0.379);
-  cursor: default;
-  text-transform: capitalize;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  border: 2px solid rgba(23, 174, 157, 0.379);
   gap: 8px;
-  display: flex;
   align-items: center;
 }
 

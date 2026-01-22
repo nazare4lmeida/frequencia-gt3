@@ -160,7 +160,7 @@ export default function Perfil({ user, setUser, onVoltar }) {
                 className="input-modern" 
                 value={user.email} 
                 disabled 
-                style={{ opacity: 0.6, cursor: 'not-allowed', backgroundColor: 'rgba(71, 50, 61, 0.53)' }} 
+                style={{ opacity: 0.6, cursor: 'not-allowed', backgroundColor: 'rgba(57, 52, 54, 0.88)' }} 
             />
             <small style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>O e-mail não pode ser alterado.</small>
           </div>

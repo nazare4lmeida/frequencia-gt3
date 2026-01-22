@@ -522,3 +522,96 @@ body:not(.dark) .stat-card {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ================================================= */
+/* 9. AJUSTES PARA PERFIL E ADMIN                    */
+/* ================================================= */
+
+/* Estilo para labels acima dos inputs no Perfil */
+.stat-label {
+  display: block;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* Select customizado (estilo input-modern) */
+select.input-modern {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='C19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+  padding-right: 2.5rem;
+}
+
+/* Calendário de próximas aulas (Lista sutil) */
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  font-size: 0.85rem;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
+  display: flex;
+  justify-content: space-between;
+}
+
+li:last-child {
+  border-bottom: none;
+}
+
+/* Botão de Check-in travado (Estado desabilitado) */
+.btn-ponto:disabled {
+  background-color: #1e293b;
+  color: var(--text-dim);
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.5;
+}
+
+/* Badge de Turma no Login e Perfil */
+.user-name-badge {
+  display: inline-block;
+  background: rgba(20, 184, 166, 0.1);
+  color: var(--teal-primary);
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+}
+
+/* Alinhamento para o formulário de Perfil */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Input desabilitado (Visual sutil) */
+input:disabled {
+  opacity: 0.6;
+  background: rgba(15, 23, 42, 0.4);
+  cursor: default;
+}
+
+/* Ajuste de responsividade para o Admin */
+@media (max-width: 600px) {
+  .login-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .header-right .clock {
+    display: none; /* Esconde o relógio no mobile para sobrar espaço */
+  }
+}

@@ -3,6 +3,24 @@ import "./App.css";
 import { API_URL } from "./Constants";
 import Login from "./Login";
 
+// Funções para o Calendário de Segundas-feiras
+const getProximasSegundas = (formacao) => {
+  const segundas = [];
+  const dataLimite =
+    formacao === "fullstack" ? new Date("2026-03-31") : new Date("2026-04-30");
+  const hoje = new Date();
+  let dia = new Date(hoje);
+
+  // Ajusta para a próxima segunda
+  dia.setDate(hoje.getDate() + ((1 + 7 - hoje.getDay()) % 7));
+
+  while (dia <= dataLimite) {
+    segundas.push(new Date(dia).toLocaleDateString("pt-BR"));
+    dia.setDate(dia.getDate() + 7);
+  }
+  return segundas.slice(0, 4); // Mostra apenas as próximas 4 para não poluir
+};
+
 export default function App() {
   const [user, setUser] = useState(() => {
     const s = localStorage.getItem("gt3_session");
@@ -24,8 +42,12 @@ export default function App() {
   const [form, setForm] = useState(dadosSalvos || { email: "", dataNasc: "" });
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
-  const [feedback, setFeedback] = useState({ nota: 0, revisao: "", modal: false });
-  
+  const [feedback, setFeedback] = useState({
+    nota: 0,
+    revisao: "",
+    modal: false,
+  });
+
   // Alteração: Inicia o tema com base na preferência salva ou padrão dark
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const salvo = localStorage.getItem("gt3_theme");
@@ -35,12 +57,22 @@ export default function App() {
   const [alarmeAtivo, setAlarmeAtivo] = useState(false);
 
   // Inclusão: Estado para o relógio em tempo real
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  const [currentTime, setCurrentTime] = useState(
+    new Date().toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  );
 
   // Inclusão: Efeito para atualizar o relógio
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+      setCurrentTime(
+        new Date().toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -85,8 +117,14 @@ export default function App() {
         return;
       }
       setUser(data);
-      localStorage.setItem("gt3_remember", JSON.stringify({ email: data.email, dataNasc: data.data_nascimento }));
-      localStorage.setItem("gt3_session", JSON.stringify({ userData: data, timestamp: Date.now() }));
+      localStorage.setItem(
+        "gt3_remember",
+        JSON.stringify({ email: data.email, dataNasc: data.data_nascimento }),
+      );
+      localStorage.setItem(
+        "gt3_session",
+        JSON.stringify({ userData: data, timestamp: Date.now() }),
+      );
     } catch {
       exibirPopup("Erro de conexão com o servidor", "erro");
     }
@@ -118,7 +156,10 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       const agora = new Date();
-      if ((agora.getHours() === 17 || agora.getHours() === 21) && agora.getMinutes() === 55) {
+      if (
+        (agora.getHours() === 17 || agora.getHours() === 21) &&
+        agora.getMinutes() === 55
+      ) {
         setAlarmeAtivo(true);
       }
     }, 60000);
@@ -148,11 +189,13 @@ export default function App() {
   const hoje = new Date().toLocaleDateString("en-CA");
   const pontoHoje = historico.find((h) => h.data.split("T")[0] === hoje);
   const totalPresencas = historico.length;
-  const totalFaltas = 0; 
+  const totalFaltas = 0;
 
   return (
     <div className="app-wrapper">
-      {popup.show && <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>}
+      {popup.show && (
+        <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>
+      )}
       {alarmeAtivo && (
         <div className="alarme-box animate-pulse-glow">
           <p>⏰ 5 minutos para o ponto!</p>
@@ -166,7 +209,9 @@ export default function App() {
             Registro de Frequência
             <span>Geração Tech 3.0</span>
           </div>
-          <div className="user-badge">{user.role === "admin" ? "Admin" : "Aluno"}</div>
+          <div className="user-badge">
+            {user.role === "admin" ? "Admin" : "Aluno"}
+          </div>
         </div>
         <div className="header-right">
           <span className="clock">🕒 {currentTime}</span>
@@ -174,11 +219,19 @@ export default function App() {
             <button
               className="btn-action-circle"
               title="Ver Histórico"
-              onClick={() => document.getElementById("historico-section").scrollIntoView({ behavior: "smooth" })}
+              onClick={() =>
+                document
+                  .getElementById("historico-section")
+                  .scrollIntoView({ behavior: "smooth" })
+              }
             >
               📊
             </button>
-            <button className="btn-action-circle" title="Alternar Tema" onClick={() => setIsDarkMode(!isDarkMode)}>
+            <button
+              className="btn-action-circle"
+              title="Alternar Tema"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+            >
               {isDarkMode ? "☀️" : "🌙"}
             </button>
             <button
@@ -196,12 +249,15 @@ export default function App() {
       <main className="content-grid">
         <div className="aula-card shadow-card">
           <div className="card-header-info">
-            <p className="text-muted">{new Date().toLocaleDateString("pt-BR")}</p>
+            <p className="text-muted">
+              {new Date().toLocaleDateString("pt-BR")}
+            </p>
             <h2 className="text-teal-modern">Olá, {user.nome}!</h2>
           </div>
 
           <div className="info-banner">
-            ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de segunda-feira.
+            ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
+            segunda-feira.
           </div>
 
           <div style={{ margin: "20px 0" }}>
@@ -210,7 +266,10 @@ export default function App() {
                 CHECK-IN
               </button>
             ) : !pontoHoje?.check_out ? (
-              <button className="btn-ponto out" onClick={() => setFeedback({ ...feedback, modal: true })}>
+              <button
+                className="btn-ponto out"
+                onClick={() => setFeedback({ ...feedback, modal: true })}
+              >
                 CHECK-OUT
               </button>
             ) : (
@@ -218,8 +277,9 @@ export default function App() {
             )}
           </div>
           <p className="usability-info">
-            Seu registro será processado de acordo com o horário do servidor (Brasília). Certifique-se de realizar o
-            check-out ao final da aula para validar sua participação.
+            Seu registro será processado de acordo com o horário do servidor
+            (Brasília). Certifique-se de realizar o check-out ao final da aula
+            para validar sua participação.
           </p>
         </div>
 
@@ -228,7 +288,31 @@ export default function App() {
             <span className="stat-label">Total de Presenças</span>
             <div className="stat-value">{totalPresencas}</div>
           </div>
-          
+
+          <div
+            className="stat-card"
+            style={{ marginTop: "12px", textAlign: "left" }}
+          >
+            <span className="stat-label">📅 Próximas Aulas (Segundas)</span>
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                marginTop: "10px",
+                fontSize: "0.85rem",
+              }}
+            >
+              {getProximasSegundas(user.formacao).map((data, i) => (
+                <li
+                  key={i}
+                  style={{ marginBottom: "5px", color: "var(--teal-primary)" }}
+                >
+                  ● {data} — 19:00h
+                </li>
+              ))}
+            </ul>
+          </div>
+
           <div className="stat-card">
             <span className="stat-label">Total de Faltas</span>
             <div className="stat-value faltas">{totalFaltas}</div>
@@ -236,7 +320,10 @@ export default function App() {
 
           <div className="stat-card">
             <span className="stat-label">Status da Sessão</span>
-            <div className="stat-value text-success" style={{ fontSize: "1.2rem" }}>
+            <div
+              className="stat-value text-success"
+              style={{ fontSize: "1.2rem" }}
+            >
               Ativa
             </div>
           </div>
@@ -265,7 +352,11 @@ export default function App() {
                 ) : (
                   historico.map((h, i) => (
                     <tr key={i}>
-                      <td>{new Date(h.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
+                      <td>
+                        {new Date(h.data).toLocaleDateString("pt-BR", {
+                          timeZone: "UTC",
+                        })}
+                      </td>
                       <td>{h.check_in || "--:--"}</td>
                       <td>{h.check_out || "--:--"}</td>
                     </tr>
@@ -284,7 +375,15 @@ export default function App() {
             <p className="text-muted" style={{ marginBottom: "15px" }}>
               Como foi sua experiência na aula de hoje?
             </p>
-            <div className="rating-group" style={{ display: "flex", gap: "10px", margin: "15px 0", justifyContent: "center" }}>
+            <div
+              className="rating-group"
+              style={{
+                display: "flex",
+                gap: "10px",
+                margin: "15px 0",
+                justifyContent: "center",
+              }}
+            >
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   key={n}
@@ -299,13 +398,23 @@ export default function App() {
               className="input-notes"
               placeholder="Algum comentário ou dúvida sobre o conteúdo?"
               value={feedback.revisao}
-              onChange={(e) => setFeedback({ ...feedback, revisao: e.target.value })}
+              onChange={(e) =>
+                setFeedback({ ...feedback, revisao: e.target.value })
+              }
             />
             <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
-              <button className="btn-ponto in" onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}>
+              <button
+                className="btn-ponto in"
+                onClick={() =>
+                  baterPonto({ nota: feedback.nota, revisao: feedback.revisao })
+                }
+              >
                 Confirmar Saída
               </button>
-              <button className="btn-secondary" onClick={() => setFeedback({ ...feedback, modal: false })}>
+              <button
+                className="btn-secondary"
+                onClick={() => setFeedback({ ...feedback, modal: false })}
+              >
                 Voltar
               </button>
             </div>

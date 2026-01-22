@@ -1,4 +1,5 @@
 import React from "react";
+import { FORMACOES } from "./Constants";
 
 export default function Login({
   form,
@@ -14,7 +15,7 @@ export default function Login({
   const handleUseAnotherAccount = () => {
     localStorage.removeItem("gt3_remember");
     setDadosSalvos(null);
-    setForm({ email: "", dataNasc: "" });
+    setForm({ email: "", dataNasc: "", formacao: "" });
   };
 
   const handleChange = (field) => (e) => {
@@ -23,11 +24,7 @@ export default function Login({
 
   return (
     <div className="login-container">
-      <button
-        className="btn-action-circle theme-toggle"
-        onClick={toggleTheme}
-        title="Alternar Tema"
-      >
+      <button className="btn-action-circle theme-toggle" onClick={toggleTheme}>
         {isDarkMode ? "☀️" : "🌙"}
       </button>
 
@@ -42,9 +39,10 @@ export default function Login({
         {dadosSalvos ? (
           <div className="welcome-back">
             <p>● Bem-vindo de volta,</p>
-            <div className="user-name-badge">
-              {dadosSalvos.nome}
-            </div>
+            <div className="user-name-badge">{dadosSalvos.nome}</div>
+            <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>
+              Turma: {FORMACOES.find(f => f.id === dadosSalvos.formacao)?.nome || "Não definida"}
+            </p>
 
             <button onClick={handleLogin} className="btn-ponto in">
               Confirmar e Entrar
@@ -69,7 +67,20 @@ export default function Login({
               value={form.dataNasc}
               onChange={handleChange("dataNasc")}
             />
-            <button onClick={handleLogin} className="btn-ponto in">
+            
+            <select 
+              className="input-modern" 
+              value={form.formacao} 
+              onChange={handleChange("formacao")}
+              style={{ appearance: 'none' }}
+            >
+              <option value="">Selecione sua Formação</option>
+              {FORMACOES.map(f => (
+                <option key={f.id} value={f.id}>{f.nome}</option>
+              ))}
+            </select>
+
+            <button onClick={handleLogin} className="btn-ponto in" disabled={!form.formacao}>
               Entrar no Portal
             </button>
           </div>

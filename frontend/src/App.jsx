@@ -28,6 +28,17 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [alarmeAtivo, setAlarmeAtivo] = useState(false);
 
+  // Inclusão: Estado para o relógio em tempo real
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+
+  // Inclusão: Efeito para atualizar o relógio
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const exibirPopup = (msg, tipo) => {
     setPopup({ show: true, msg, tipo });
     setTimeout(() => setPopup({ show: false, msg: "", tipo: "" }), 5000);
@@ -129,6 +140,8 @@ export default function App() {
   const hoje = new Date().toLocaleDateString("en-CA");
   const pontoHoje = historico.find((h) => h.data.split("T")[0] === hoje);
   const totalPresencas = historico.length;
+  // Exemplo de cálculo de faltas (ajuste conforme sua regra de negócio)
+  const totalFaltas = 0; 
 
   return (
     <div className="app-wrapper">
@@ -148,26 +161,29 @@ export default function App() {
           </div>
           <div className="user-badge">{user.role === "admin" ? "Admin" : "Aluno"}</div>
         </div>
-        <div className="nav-actions">
-          <button
-            className="btn-action-circle"
-            title="Ver Histórico"
-            onClick={() => document.getElementById("historico-section").scrollIntoView({ behavior: "smooth" })}
-          >
-            📊
-          </button>
-          <button className="btn-action-circle" title="Alternar Tema" onClick={() => setIsDarkMode(!isDarkMode)}>
-            {isDarkMode ? "☀️" : "🌙"}
-          </button>
-          <button
-            className="btn-secondary"
-            onClick={() => {
-              localStorage.removeItem("gt3_session");
-              setUser(null);
-            }}
-          >
-            Sair
-          </button>
+        <div className="header-right">
+          <span className="clock">🕒 {currentTime}</span>
+          <div className="nav-actions">
+            <button
+              className="btn-action-circle"
+              title="Ver Histórico"
+              onClick={() => document.getElementById("historico-section").scrollIntoView({ behavior: "smooth" })}
+            >
+              📊
+            </button>
+            <button className="btn-action-circle" title="Alternar Tema" onClick={() => setIsDarkMode(!isDarkMode)}>
+              {isDarkMode ? "☀️" : "🌙"}
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                localStorage.removeItem("gt3_session");
+                setUser(null);
+              }}
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
       <main className="content-grid">
@@ -176,6 +192,12 @@ export default function App() {
             <p className="text-muted">{new Date().toLocaleDateString("pt-BR")}</p>
             <h2 className="text-teal-modern">Olá, {user.nome}!</h2>
           </div>
+
+          {/* Inclusão: Banner Informativo sobre as aulas de segunda */}
+          <div className="info-banner">
+            ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de segunda-feira.
+          </div>
+
           <div style={{ margin: "20px 0" }}>
             {!pontoHoje?.check_in ? (
               <button className="btn-ponto in animate-pulse-glow" onClick={() => baterPonto()}>
@@ -200,6 +222,13 @@ export default function App() {
             <span className="stat-label">Total de Presenças</span>
             <div className="stat-value">{totalPresencas}</div>
           </div>
+          
+          {/* Inclusão: Bloco de Faltas */}
+          <div className="stat-card">
+            <span className="stat-label">Total de Faltas</span>
+            <div className="stat-value faltas">{totalFaltas}</div>
+          </div>
+
           <div className="stat-card">
             <span className="stat-label">Status da Sessão</span>
             <div className="stat-value text-success" style={{ fontSize: "1.2rem" }}>

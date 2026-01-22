@@ -322,7 +322,7 @@ export default function App() {
                       color: "#f8fafcdd",
                     }}
                   >
-                    ● {data} — 19:00h
+                    ● {data} — 18:30h
                   </li>
                 ))}
               </ul>

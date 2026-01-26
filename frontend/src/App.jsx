@@ -8,13 +8,16 @@ import Perfil from "./Perfil";
 // Funções para o Calendário de Segundas-feiras
 const getProximasSegundas = (formacao) => {
   const segundas = [];
-  const dataLimite =
-    formacao === "fullstack" ? new Date("2026-03-31") : new Date("2026-04-30");
-  const hoje = new Date();
-  let dia = new Date(hoje);
+  const dataLimite = formacao === "fullstack" ? new Date("2026-03-31") : new Date("2026-04-30");
+  
+  // Pega a data atual no fuso de Brasília
+  const agora = new Date();
+  const hojeBrasilia = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  
+  let dia = new Date(hojeBrasilia);
 
   // Ajusta para a próxima segunda
-  dia.setDate(hoje.getDate() + ((1 + 7 - hoje.getDay()) % 7));
+  dia.setDate(hojeBrasilia.getDate() + ((1 + 7 - hojeBrasilia.getDay()) % 7));
 
   while (dia <= dataLimite) {
     segundas.push(new Date(dia).toLocaleDateString("pt-BR"));
@@ -106,9 +109,11 @@ export default function App() {
 
   const validarHorarioPonto = () => {
     const agora = new Date();
-    const diaSemana = agora.getDay();
-    const hora = agora.getHours();
-    const minutos = agora.getMinutes();
+    // Força cálculo baseado em Brasília para evitar erro em quem está fora do fuso
+    const brasilia = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const diaSemana = brasilia.getDay(); 
+    const hora = brasilia.getHours();
+    const minutos = brasilia.getMinutes();
     const horaDecimal = hora + minutos / 60;
 
     const isSegunda = diaSemana === 1;
@@ -119,10 +124,16 @@ export default function App() {
   };
 
   const carregarHistorico = useCallback(async () => {
-    // Pegamos o email direto do estado ou do localStorage para garantir
-    const emailParaBusca =
-      user?.email ||
-      JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
+    const sessionData = localStorage.getItem("gt3_session");
+    let emailLocal = "";
+    
+    try {
+      if (sessionData) {
+        emailLocal = JSON.parse(sessionData)?.userData?.email;
+      }
+    } catch (e) { console.error(e); }
+
+    const emailParaBusca = user?.email || emailLocal;
 
     if (!emailParaBusca || user?.role === "admin") return;
 
@@ -132,7 +143,7 @@ export default function App() {
       );
       if (res.ok) {
         const data = await res.json();
-        setHistorico(data); // Isso fará o botão mudar de CHECK-IN para CHECK-OUT ou CONCLUÍDO
+        setHistorico(data); 
       }
     } catch (err) {
       console.error("Erro ao carregar histórico:", err);
@@ -253,21 +264,17 @@ export default function App() {
     );
   }
 
-  const hoje = new Date()
-    .toLocaleString("en-US", {
-      timeZone: "America/Sao_Paulo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-    .split(",")[0]
-    .split("/")
-    .reverse()
-    .join("-");
+  // Força a data de hoje no formato YYYY-MM-DD (Brasília) para comparação exata
+  const hoje = new Date().toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+  }).split('/').reverse().join('-');
+
   const pontoHoje = historico.find((h) => {
-    const dataRegistro = h.data.includes("T") ? h.data.split("T")[0] : h.data;
+    // Garante que pegamos apenas os primeiros 10 caracteres (YYYY-MM-DD) do histórico
+    const dataRegistro = h.data.substring(0, 10);
     return dataRegistro === hoje;
   });
+
   const totalPresencas = historico.length;
   const totalFaltas = 0;
 
@@ -359,23 +366,18 @@ export default function App() {
                 border: "1px solid var(--border-subtle)",
               }}
             >
-              ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
-              segunda-feira.
+              ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de segunda-feira.
             </div>
 
             <div style={{ margin: "20px 0", textAlign: "center" }}>
               {(() => {
-                const { isSegunda, podeCheckIn, podeCheckOut } =
-                  validarHorarioPonto();
+                const { isSegunda, podeCheckIn, podeCheckOut } = validarHorarioPonto();
 
                 if (!isSegunda) {
                   return (
                     <div
                       className="info-banner"
-                      style={{
-                        color: "var(--text-dim)",
-                        background: "transparent",
-                      }}
+                      style={{ color: "var(--text-dim)", background: "transparent" }}
                     >
                       ⚠️ O sistema de presença está fechado hoje.
                     </div>
@@ -390,10 +392,7 @@ export default function App() {
                         if (podeCheckIn) {
                           baterPonto();
                         } else {
-                          exibirPopup(
-                            "🕒 Janela de Check-in: 18:00 às 20:30.",
-                            "aviso",
-                          );
+                          exibirPopup("🕒 Janela de Check-in: 18:00 às 20:30.", "aviso");
                         }
                       }}
                     >
@@ -410,10 +409,7 @@ export default function App() {
                         if (podeCheckOut) {
                           setFeedback({ ...feedback, modal: true });
                         } else {
-                          exibirPopup(
-                            "🕒 Janela de Check-out: 22:00 às 22:30.",
-                            "aviso",
-                          );
+                          exibirPopup("🕒 Janela de Check-out: 22:00 às 22:30.", "aviso");
                         }
                       }}
                     >
@@ -429,8 +425,7 @@ export default function App() {
             </div>
             <p className="usability-info">
               Registro processado pelo horário de Brasília.
-              <br />
-              <br />
+              <br /><br />
               <strong>🕒 Janela de Check-in:</strong> 18:00 às 20:30
               <br />
               <strong>🕒 Janela de Check-out:</strong> 22:00 às 22:30
@@ -443,24 +438,11 @@ export default function App() {
               <div className="stat-value">{totalPresencas}</div>
             </div>
 
-            <div
-              className="stat-card"
-              style={{ marginTop: "12px", textAlign: "left" }}
-            >
+            <div className="stat-card" style={{ marginTop: "12px", textAlign: "left" }}>
               <span className="stat-label">📅 Próximas Aulas</span>
-              <ul
-                style={{
-                  listStyle: "none",
-                  padding: 0,
-                  marginTop: "10px",
-                  fontSize: "0.85rem",
-                }}
-              >
+              <ul style={{ listStyle: "none", padding: 0, marginTop: "10px", fontSize: "0.85rem" }}>
                 {getProximasSegundas(user.formacao).map((data, i) => (
-                  <li
-                    key={i}
-                    style={{ marginBottom: "5px", color: "var(--text-normal)" }}
-                  >
+                  <li key={i} style={{ marginBottom: "5px", color: "var(--text-normal)" }}>
                     ● {data} — 18:30h
                   </li>
                 ))}
@@ -474,19 +456,11 @@ export default function App() {
 
             <div className="stat-card">
               <span className="stat-label">Status da Sessão</span>
-              <div
-                className="stat-value text-success"
-                style={{ fontSize: "1.2rem" }}
-              >
-                Ativa
-              </div>
+              <div className="stat-value text-success" style={{ fontSize: "1.2rem" }}>Ativa</div>
             </div>
           </div>
 
-          <div
-            id="historico-section"
-            className="historico-container shadow-card"
-          >
+          <div id="historico-section" className="historico-container shadow-card">
             <h3>Meu Histórico Completo</h3>
             <div className="table-responsive">
               <table className="historico-table">
@@ -500,13 +474,7 @@ export default function App() {
                 <tbody>
                   {historico.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan="3"
-                        style={{
-                          textAlign: "center",
-                          color: "var(--text-dim)",
-                        }}
-                      >
+                      <td colSpan="3" style={{ textAlign: "center", color: "var(--text-dim)" }}>
                         Nenhum registro encontrado.
                       </td>
                     </tr>
@@ -514,9 +482,7 @@ export default function App() {
                     historico.map((h, i) => (
                       <tr key={i}>
                         <td>
-                          {new Date(h.data).toLocaleDateString("pt-BR", {
-                            timeZone: "UTC",
-                          })}
+                          {new Date(h.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
                         </td>
                         <td>{h.check_in || "--:--"}</td>
                         <td>{h.check_out || "--:--"}</td>
@@ -534,18 +500,8 @@ export default function App() {
         <div className="modal-overlay">
           <div className="modal-content shadow-xl">
             <h3>Finalizar Check-out</h3>
-            <p className="text-muted" style={{ marginBottom: "15px" }}>
-              Como foi sua experiência na aula de hoje?
-            </p>
-            <div
-              className="rating-group"
-              style={{
-                display: "flex",
-                gap: "10px",
-                margin: "15px 0",
-                justifyContent: "center",
-              }}
-            >
+            <p className="text-muted" style={{ marginBottom: "15px" }}>Como foi sua experiência na aula de hoje?</p>
+            <div className="rating-group" style={{ display: "flex", gap: "10px", margin: "15px 0", justifyContent: "center" }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   key={n}
@@ -560,16 +516,12 @@ export default function App() {
               className="input-notes"
               placeholder="Algum comentário ou dúvida?"
               value={feedback.revisao}
-              onChange={(e) =>
-                setFeedback({ ...feedback, revisao: e.target.value })
-              }
+              onChange={(e) => setFeedback({ ...feedback, revisao: e.target.value })}
             />
             <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
               <button
                 className="btn-ponto in"
-                onClick={() =>
-                  baterPonto({ nota: feedback.nota, revisao: feedback.revisao })
-                }
+                onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}
               >
                 Confirmar Saída
               </button>

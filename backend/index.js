@@ -147,11 +147,23 @@ app.put("/api/aluno/perfil", async (req, res) => {
 });
 
 // ==========================================
-// REGISTRAR PONTO (USANDO aluno_email)
+// REGISTRAR PONTO (CORRIGIDO PARA SEGUNDAS)
 // ==========================================
 app.post("/api/ponto", async (req, res) => {
-  const { aluno_id, nota, revisao } = req.body; // aluno_id aqui é o email vindo do front
+  const { aluno_id, nota, revisao } = req.body; 
   const { data: hoje, hora: agora } = getBrasiliaTime();
+  
+  // Garantimos a verificação do dia da semana em Brasília
+  const agoraBrasilia = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const diaSemana = agoraBrasilia.getDay(); // 1 é Segunda-feira
+
+  // Trava de segurança: apenas segundas-feiras
+  if (diaSemana !== 1) {
+    return res.status(403).json({ 
+      error: "O sistema de presença só abre às segundas-feiras. Hoje é " + 
+             agoraBrasilia.toLocaleDateString('pt-BR', { weekday: 'long' }) + "." 
+    });
+  }
 
   try {
     const { data: pontoExistente } = await supabase
@@ -159,7 +171,7 @@ app.post("/api/ponto", async (req, res) => {
       .select("*")
       .eq("aluno_email", aluno_id)
       .eq("data", hoje)
-      .single();
+      .maybeSingle(); // maybeSingle evita erro de "PGRST116" caso não encontre nada
 
     if (!pontoExistente) {
       // Check-in
@@ -171,11 +183,11 @@ app.post("/api/ponto", async (req, res) => {
         },
       ]);
       if (error) throw error;
-      return res.json({ msg: "Check-in realizado!" });
+      return res.json({ msg: "Check-in realizado com sucesso!" });
     } else {
       // Check-out
       if (pontoExistente.check_out) {
-        return res.status(400).json({ error: "Ponto já concluído hoje." });
+        return res.status(400).json({ error: "Você já concluiu sua presença de hoje." });
       }
 
       const { error } = await supabase
@@ -188,13 +200,11 @@ app.post("/api/ponto", async (req, res) => {
         .eq("id", pontoExistente.id); 
 
       if (error) throw error;
-      return res.json({ msg: "Check-out realizado!" });
+      return res.json({ msg: "Check-out realizado com sucesso!" });
     }
   } catch (err) {
     console.error("ERRO PONTO:", err);
-    res
-      .status(500)
-      .json({ error: "Você só pode registrar frequência nas Segundas." });
+    res.status(500).json({ error: "Erro interno ao registrar frequência." });
   }
 });
 

@@ -365,6 +365,34 @@ app.get('/api/admin/stats/:turma', async (req, res) => {
   }
 });
 
+// ==========================================
+// ROTA DE RELATÓRIO (CORRIGIDA PARA "TODOS")
+// ==========================================
+app.get("/api/admin/relatorio/:turma", async (req, res) => {
+  const { turma } = req.params;
+
+  try {
+    let query = supabase
+      .from("alunos")
+      .select("nome, email, cpf, presencas(data)");
+
+    // Se o parâmetro NÃO for "todos", filtramos pela turma específica
+    if (turma !== "todos") {
+      query = query.eq("formacao", turma);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Retorna a lista de alunos com suas respectivas presenças
+    res.json(data);
+  } catch (err) {
+    console.error("ERRO RELATÓRIO:", err);
+    res.status(500).json({ error: "Erro ao gerar dados do relatório." });
+  }
+});
+
 app.get("/api/health", (_, res) => res.json({ status: "online" }));
 
 if (process.env.NODE_ENV !== "production") {

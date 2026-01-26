@@ -6,10 +6,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY,
-);
+// Verificação de segurança para as chaves do Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("ERRO: Variáveis de ambiente SUPABASE_URL ou SUPABASE_KEY não configuradas!");
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Helper para pegar data e hora de Brasília
 const getBrasiliaTime = () => {
@@ -35,7 +40,6 @@ app.post("/api/login", async (req, res) => {
 
   const emailFormatado = email.trim().toLowerCase();
 
-  // Admin fixo
   if (emailFormatado === "admin@gt3.com" && dataNascimento === "2026-01-01") {
     return res.json({
       nome: "Administrador",
@@ -55,7 +59,6 @@ app.post("/api/login", async (req, res) => {
     let aluno;
 
     if (!alunos || alunos.length === 0) {
-      // Cadastro automático se não existir (Primeiro Acesso)
       const { data: novoAluno, error: insertError } = await supabase
         .from("alunos")
         .insert([
@@ -70,25 +73,23 @@ app.post("/api/login", async (req, res) => {
       if (insertError) throw insertError;
       aluno = novoAluno[0];
     } else {
-      // Aluno já existe no sistema
       aluno = alunos[0];
 
-      // BLOQUEIO DE DUPLICIDADE: Validação de data de nascimento
-      const dataFormatadaDb = aluno.data_nascimento.toString().split("T")[0];
-      if (dataFormatadaDb !== dataNascimento) {
-        return res.status(401).json({ 
-          error: "Este e-mail já está cadastrado com outra data de nascimento. Caso tenha digitado errado, procure a coordenação." 
-        });
+      if (aluno.data_nascimento) {
+        const dataFormatadaDb = aluno.data_nascimento.toString().split("T")[0];
+        if (dataFormatadaDb !== dataNascimento) {
+          return res.status(401).json({ 
+            error: "Este e-mail já está cadastrado com outra data de nascimento. Caso tenha digitado errado, procure a coordenação." 
+          });
+        }
       }
 
-      // BLOQUEIO DE ALTERAÇÃO DE TURMA: Se já tem formação, não permite trocar no login
       if (aluno.formacao && formacao && aluno.formacao !== formacao) {
         return res.status(403).json({ 
           error: `Você já está registrado na formação ${aluno.formacao}. Não é permitido acesso duplicado em outra turma.` 
         });
       }
 
-      // Se o aluno existia mas por algum motivo não tinha formação salva ainda, atualiza uma única vez
       if (formacao && !aluno.formacao) {
         await supabase
           .from("alunos")
@@ -105,7 +106,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// Busca dados para a tela de Perfil
 app.get("/api/aluno/perfil/:email", async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -122,14 +122,11 @@ app.get("/api/aluno/perfil/:email", async (req, res) => {
   }
 });
 
-// Salva alterações do perfil usando EMAIL como referência (PK)
 app.put("/api/aluno/perfil", async (req, res) => {
   const { email, nome, cpf, avatar } = req.body;
 
   if (!email) {
-    return res
-      .status(400)
-      .json({ error: "E-mail é necessário para identificar o aluno." });
+    return res.status(400).json({ error: "E-mail é necessário para identificar o aluno." });
   }
 
   try {
@@ -147,7 +144,7 @@ app.put("/api/aluno/perfil", async (req, res) => {
 });
 
 // ==========================================
-// REGISTRAR PONTO (CORRIGIDO PARA EVITAR ERRO 500)
+// REGISTRAR PONTO (CORREÇÃO DO ERRO 500)
 // ==========================================
 app.post("/api/ponto", async (req, res) => {
   const { aluno_id, nota, revisao } = req.body; 
@@ -155,10 +152,10 @@ app.post("/api/ponto", async (req, res) => {
   
   if (!aluno_id) return res.status(400).json({ error: "E-mail do aluno não enviado." });
 
-  // Garantimos a verificação do dia da semana em Brasília
   const agoraBrasilia = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
   const diaSemana = agoraBrasilia.getDay(); 
 
+  // Validação do dia (1 = Segunda-feira)
   if (diaSemana !== 1) {
     return res.status(403).json({ 
       error: "O sistema só abre às segundas. Hoje é " + agoraBrasilia.toLocaleDateString('pt-BR', { weekday: 'long' }) 
@@ -166,13 +163,26 @@ app.post("/api/ponto", async (req, res) => {
   }
 
   try {
-    // Buscamos se já existe um registro para o aluno na data de hoje
+    const emailBusca = aluno_id.trim().toLowerCase();
+
+    // 1. Verificar se o aluno existe antes de bater o ponto
+    const { data: alunoExiste } = await supabase
+      .from("alunos")
+      .select("email")
+      .eq("email", emailBusca)
+      .maybeSingle();
+
+    if (!alunoExiste) {
+      return res.status(404).json({ error: "Aluno não encontrado na base de dados." });
+    }
+
+    // 2. Buscar ponto do dia
     const { data: pontoExistente, error: fetchError } = await supabase
       .from("presencas")
       .select("*")
-      .eq("aluno_email", aluno_id.trim().toLowerCase())
+      .eq("aluno_email", emailBusca)
       .eq("data", hoje)
-      .maybeSingle(); // maybeSingle() não gera erro se não encontrar nada
+      .maybeSingle();
 
     if (fetchError) throw fetchError;
 
@@ -180,7 +190,7 @@ app.post("/api/ponto", async (req, res) => {
       // Realizar Check-in
       const { error: insError } = await supabase.from("presencas").insert([
         {
-          aluno_email: aluno_id.trim().toLowerCase(),
+          aluno_email: emailBusca,
           data: hoje,
           check_in: agora,
         },
@@ -193,7 +203,6 @@ app.post("/api/ponto", async (req, res) => {
         return res.status(400).json({ error: "Você já concluiu sua presença de hoje." });
       }
 
-      // Verificamos se o objeto pontoExistente tem um ID válido antes de atualizar
       const { error: updError } = await supabase
         .from("presencas")
         .update({
@@ -208,46 +217,32 @@ app.post("/api/ponto", async (req, res) => {
     }
   } catch (err) {
     console.error("ERRO CRÍTICO NO PONTO:", err);
-    res.status(500).json({ error: "Erro no banco de dados. Tente novamente mais tarde." });
+    // Retornamos o erro real no log para você ver no terminal do VS Code/Vercel
+    res.status(500).json({ error: "Erro no banco de dados: " + (err.message || "Tente novamente.") });
   }
 });
 
 // ==========================================
-// ADMIN: BUSCA E GERENCIAMENTO
+// ADMIN E OUTROS (MANTIDOS)
 // ==========================================
 
 app.get("/api/admin/busca", async (req, res) => {
   const { termo, turma, status } = req.query;
   try {
     let query = supabase.from("alunos").select("*");
-    
-    if (turma && turma !== "todos") {
-      query = query.eq("formacao", turma);
-    }
-
-    if (termo) {
-      query = query.or(`nome.ilike.%${termo}%,cpf.ilike.%${termo}%,email.ilike.%${termo}%`);
-    }
-
-    if (status === "incompleto") {
-      query = query.or("nome.is.null,cpf.is.null");
-    }
+    if (turma && turma !== "todos") query = query.eq("formacao", turma);
+    if (termo) query = query.or(`nome.ilike.%${termo}%,cpf.ilike.%${termo}%,email.ilike.%${termo}%`);
+    if (status === "incompleto") query = query.or("nome.is.null,cpf.is.null");
 
     const { data: alunos, error } = await query;
     if (error) throw error;
 
     if (status === "pendente_saida") {
       const { data: hoje } = getBrasiliaTime();
-      const { data: presencas } = await supabase
-        .from("presencas")
-        .select("aluno_email")
-        .eq("data", hoje)
-        .is("check_out", null);
-      
+      const { data: presencas } = await supabase.from("presencas").select("aluno_email").eq("data", hoje).is("check_out", null);
       const emailsPendentes = presencas.map(p => p.aluno_email);
       return res.json(alunos.filter(a => emailsPendentes.includes(a.email)));
     }
-
     res.json(alunos);
   } catch (err) {
     res.status(500).json({ error: "Erro na busca administrativa." });
@@ -258,10 +253,7 @@ app.put("/api/admin/aluno/:email", async (req, res) => {
   const { nome, email, cpf, data_nascimento } = req.body;
   const emailOriginal = decodeURIComponent(req.params.email); 
   try {
-    const { error } = await supabase
-      .from("alunos")
-      .update({ nome, email, cpf, data_nascimento })
-      .eq("email", emailOriginal);
+    const { error } = await supabase.from("alunos").update({ nome, email, cpf, data_nascimento }).eq("email", emailOriginal);
     if (error) throw error;
     res.json({ msg: "Dados atualizados com sucesso" });
   } catch (err) {
@@ -284,9 +276,7 @@ app.delete("/api/admin/aluno/:email", async (req, res) => {
 app.post("/api/admin/ponto-manual", async (req, res) => {
   const { email, data, check_in, check_out } = req.body;
   try {
-    const { error } = await supabase.from("presencas").insert([
-      { aluno_email: email, data, check_in, check_out }
-    ]);
+    const { error } = await supabase.from("presencas").insert([{ aluno_email: email, data, check_in, check_out }]);
     if (error) throw error;
     res.json({ msg: "Ponto manual registrado!" });
   } catch (err) {
@@ -300,21 +290,13 @@ app.post("/api/admin/reset-session", async (req, res) => {
 
 app.get("/api/historico/aluno/:email", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("presencas")
-      .select("*")
-      .eq("aluno_email", req.params.email)
-      .order("data", { ascending: false });
+    const { data, error } = await supabase.from("presencas").select("*").eq("aluno_email", req.params.email).order("data", { ascending: false });
     if (error) throw error;
     res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: "Erro ao carregar histórico." });
   }
 });
-
-// ==========================================
-// ESTATÍSTICAS E RELATÓRIO
-// ==========================================
 
 app.get('/api/admin/stats/:turma', async (req, res) => {
   const { turma } = req.params;

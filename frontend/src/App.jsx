@@ -119,26 +119,31 @@ export default function App() {
   };
 
   const carregarHistorico = useCallback(async () => {
-    if (!user?.email || user.role === "admin") return;
+    // Pegamos o email direto do estado ou do localStorage para garantir
+    const emailParaBusca = user?.email || JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
+    
+    if (!emailParaBusca || user?.role === "admin") return;
+
     try {
-      const res = await fetch(`${API_URL}/historico/aluno/${user.email}`);
+      const res = await fetch(`${API_URL}/historico/aluno/${emailParaBusca.trim().toLowerCase()}`);
       if (res.ok) {
         const data = await res.json();
-        setHistorico(data);
+        setHistorico(data); // Isso fará o botão mudar de CHECK-IN para CHECK-OUT ou CONCLUÍDO
       }
-    } catch {
-      exibirPopup("Erro ao carregar histórico", "erro");
+    } catch (err) {
+      console.error("Erro ao carregar histórico:", err);
     }
   }, [user]);
 
- useEffect(() => {
-    const inicializarHistorico = async () => {
-      if (user?.email) {
-        await carregarHistorico();
-      }
-    };
-
-    inicializarHistorico();
+  // CORREÇÃO DO ERRO DE RENDERIZAÇÃO (Cascading renders)
+  useEffect(() => {
+    if (user?.email) {
+      // Usamos um pequeno timeout ou setImmediate para tirar do ciclo síncrono
+      const timer = setTimeout(() => {
+        carregarHistorico();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
   }, [user?.email, carregarHistorico]);
 
   const handleLogin = async () => {

@@ -301,10 +301,17 @@ app.post("/api/admin/reset-session", async (req, res) => {
 
 app.get("/api/historico/aluno/:email", async (req, res) => {
   try {
-    const { data, error } = await supabase.from("presencas").select("*").eq("aluno_email", req.params.email).order("data", { ascending: false });
+    const emailFormatado = req.params.email.trim().toLowerCase(); // Limpeza total
+    const { data, error } = await supabase
+      .from("presencas")
+      .select("*")
+      .eq("aluno_email", emailFormatado) // Deve bater com o nome da coluna no banco
+      .order("data", { ascending: false });
+
     if (error) throw error;
     res.json(data || []);
   } catch (err) {
+    console.error("ERRO HISTORICO:", err);
     res.status(500).json({ error: "Erro ao carregar histórico." });
   }
 });

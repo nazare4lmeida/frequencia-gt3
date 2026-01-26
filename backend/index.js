@@ -149,49 +149,44 @@ app.put("/api/aluno/perfil", async (req, res) => {
 app.post("/api/ponto", async (req, res) => {
   const { aluno_id, nota, revisao } = req.body;
   const { data: hoje, hora: agora } = getBrasiliaTime();
-  const timestampCompleto = `${hoje} ${agora}`;
-
-  if (!aluno_id) return res.status(400).json({ error: "E-mail não enviado." });
+  const emailBusca = aluno_id.trim().toLowerCase();
 
   try {
-    const emailBusca = aluno_id.trim().toLowerCase();
-
-    // 1. Buscamos se já existe o registro de hoje
-    const { data: pontoExistente } = await supabase
+    const { data: pontoExistente, error: fetchError } = await supabase
       .from("presencas")
       .select("*")
       .eq("aluno_email", emailBusca)
       .eq("data", hoje)
       .maybeSingle();
 
-    // 2. Lógica de Check-in (Se não existe nada)
+    if (fetchError) throw fetchError;
+
+    // CHECK-IN: Se não encontrou registro hoje
     if (!pontoExistente) {
       const { error: insError } = await supabase
         .from("presencas")
         .insert([{
           aluno_email: emailBusca,
           data: hoje,
-          check_in: timestampCompleto,
-          cpf: "REGISTRO_SISTEMA" // Para evitar o erro de NOT NULL do CPF
+          check_in: agora, // Salve apenas a hora aqui
+          cpf: "REGISTRO_SISTEMA" 
         }]);
 
-      if (insError && insError.code === '23505') {
-        return res.json({ msg: "Check-in já estava registrado!" });
-      }
       if (insError) throw insError;
       return res.json({ msg: "Check-in realizado com sucesso!" });
     } 
     
-    // 3. Lógica de Check-out (Se já existe o Check-in mas não tem Check-out)
+    // CHECK-OUT: Se já existe o Check-in
     else {
-      if (pontoHoje?.check_out) {
+      // CORREÇÃO AQUI: Usar pontoExistente em vez de pontoHoje
+      if (pontoExistente.check_out) {
         return res.json({ msg: "Você já concluiu sua presença de hoje." });
       }
 
       const { error: updError } = await supabase
         .from("presencas")
         .update({
-          check_out: timestampCompleto,
+          check_out: agora, // Salve apenas a hora aqui
           feedback_nota: nota || null,
           feedback_texto: revisao || "",
         })
@@ -202,9 +197,7 @@ app.post("/api/ponto", async (req, res) => {
     }
   } catch (err) {
     console.error("ERRO NO PONTO:", err);
-    // Respondemos sucesso mesmo no erro de duplicidade para o aluno não se assustar
-    if (err.code === '23505') return res.json({ msg: "Presença já registrada." });
-    res.status(200).json({ msg: "Processado. Verifique seu histórico." });
+    res.status(500).json({ error: "Erro ao processar presença." });
   }
 });
 

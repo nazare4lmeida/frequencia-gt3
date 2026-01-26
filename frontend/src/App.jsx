@@ -8,11 +8,14 @@ import Perfil from "./Perfil";
 // Funções para o Calendário de Segundas-feiras
 const getProximasSegundas = (formacao) => {
   const segundas = [];
-  const dataLimite = formacao === "fullstack" ? new Date("2026-03-31") : new Date("2026-04-30");
-  
+  const dataLimite =
+    formacao === "fullstack" ? new Date("2026-03-31") : new Date("2026-04-30");
+
   const agora = new Date();
-  const hojeBrasilia = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-  
+  const hojeBrasilia = new Date(
+    agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
+  );
+
   let dia = new Date(hojeBrasilia);
   dia.setDate(hojeBrasilia.getDate() + ((1 + 7 - hojeBrasilia.getDay()) % 7));
 
@@ -30,7 +33,9 @@ export default function App() {
     try {
       const { userData, timestamp } = JSON.parse(s);
       if (Date.now() - timestamp < 12 * 60 * 60 * 1000) return userData;
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
     return null;
   });
 
@@ -43,14 +48,21 @@ export default function App() {
   const [form, setForm] = useState(dadosSalvos || { email: "", dataNasc: "" });
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
-  const [feedback, setFeedback] = useState({ nota: 0, revisao: "", modal: false });
+  const [feedback, setFeedback] = useState({
+    nota: 0,
+    revisao: "",
+    modal: false,
+  });
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const salvo = localStorage.getItem("gt3_theme");
     return salvo ? JSON.parse(salvo) : true;
   });
 
   const [currentTime, setCurrentTime] = useState(
-    new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    new Date().toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
   );
 
   const [alarmeAtivo] = useState(true);
@@ -78,10 +90,16 @@ export default function App() {
   useEffect(() => {
     const timer = setInterval(() => {
       const agora = new Date();
-      const horaFormatada = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const horaFormatada = agora.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
       setCurrentTime(horaFormatada);
       if (alarmeAtivo && agora.getDay() === 1 && horaFormatada === "18:30") {
-        exibirPopup("📢 Hora da aula! Não esqueça de fazer seu Check-in.", "aviso");
+        exibirPopup(
+          "📢 Hora da aula! Não esqueça de fazer seu Check-in.",
+          "aviso",
+        );
       }
     }, 10000);
     return () => clearInterval(timer);
@@ -89,8 +107,10 @@ export default function App() {
 
   const validarHorarioPonto = () => {
     const agora = new Date();
-    const brasilia = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const diaSemana = brasilia.getDay(); 
+    const brasilia = new Date(
+      agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
+    );
+    const diaSemana = brasilia.getDay();
     const hora = brasilia.getHours();
     const minutos = brasilia.getMinutes();
     const horaDecimal = hora + minutos / 60;
@@ -118,25 +138,39 @@ export default function App() {
       }
       localStorage.removeItem("gt3_session");
       setUser(data);
-      localStorage.setItem("gt3_remember", JSON.stringify({
-        email: data.email,
-        dataNasc: data.data_nascimento,
-        nome: data.nome || "",
-        formacao: data.formacao,
-      }));
-      localStorage.setItem("gt3_session", JSON.stringify({ userData: data, timestamp: Date.now() }));
-    } catch { exibirPopup("Erro de conexão.", "erro"); }
+      localStorage.setItem(
+        "gt3_remember",
+        JSON.stringify({
+          email: data.email,
+          dataNasc: data.data_nascimento,
+          nome: data.nome || "",
+          formacao: data.formacao,
+        }),
+      );
+      localStorage.setItem(
+        "gt3_session",
+        JSON.stringify({ userData: data, timestamp: Date.now() }),
+      );
+    } catch {
+      exibirPopup("Erro de conexão.", "erro");
+    }
   };
   const carregarHistorico = useCallback(async () => {
-    const emailParaBusca = user?.email || JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
+    const emailParaBusca =
+      user?.email ||
+      JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
     if (!emailParaBusca || user?.role === "admin") return;
     try {
-      const res = await fetch(`${API_URL}/historico/aluno/${emailParaBusca.trim().toLowerCase()}`);
+      const res = await fetch(
+        `${API_URL}/historico/aluno/${emailParaBusca.trim().toLowerCase()}`,
+      );
       if (res.ok) {
         const data = await res.json();
-        setHistorico(data); 
+        setHistorico(data);
       }
-    } catch (err) { console.error("Erro ao carregar histórico:", err); }
+    } catch (err) {
+      console.error("Erro ao carregar histórico:", err);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -147,28 +181,35 @@ export default function App() {
   }, [user?.email, carregarHistorico]);
 
   const baterPonto = async (extra = {}) => {
-    if (!user || !user.email) return exibirPopup("Sessão expirada. Faça login novamente.", "erro");
-    
+    if (!user || !user.email)
+      return exibirPopup(
+        "Sessão expirada. Por favor, faça login novamente.",
+        "erro",
+      );
     try {
       const res = await fetch(`${API_URL}/ponto`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ aluno_id: user.email.trim().toLowerCase(), ...extra }),
+        body: JSON.stringify({
+          aluno_id: user.email.trim().toLowerCase(),
+          ...extra,
+        }),
       });
-      
       const data = await res.json();
-      
-      if (!res.ok) return exibirPopup(data.error || "Erro ao registrar ponto.", "erro");
-      
+      if (!res.ok)
+        return exibirPopup(data.error || "Erro ao registrar ponto.", "erro");
+
       exibirPopup(data.msg, "sucesso");
-      
-      // --- ESSA LINHA É A CHAVE ---
-      // Força o frontend a buscar os dados novos no Supabase imediatamente
-      await carregarHistorico(); 
-      
+
+      // ADICIONE ESTA LINHA AQUI:
+      await carregarHistorico();
+
       if (!extra.nota) {
         setTimeout(() => {
-          exibirPopup("📌 Lembrete: O Check-out deve ser feito hoje entre 22:00 e 22:30.", "aviso");
+          exibirPopup(
+            "📌 Lembrete: O Check-out deve ser feito hoje entre 22:00 e 22:30.",
+            "aviso",
+          );
         }, 1000);
       }
       setFeedback({ nota: 0, revisao: "", modal: false });
@@ -198,12 +239,12 @@ export default function App() {
   }
 
   // --- LÓGICA DE COMPARAÇÃO DE DATA CORRIGIDA ---
-  const hojeISO = new Date().toLocaleDateString("en-CA"); 
+  const hojeISO = new Date().toLocaleDateString("en-CA");
   const pontoHoje = historico.find((h) => {
     const dataRegistro = h.data?.substring(0, 10);
     return dataRegistro === hojeISO;
   });
-  
+
   const totalPresencas = historico.length;
   const totalFaltas = 0;
   const nomeExibicao = user.nome || user.email.split("@")[0];
@@ -292,18 +333,23 @@ export default function App() {
                 border: "1px solid var(--border-subtle)",
               }}
             >
-              ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de segunda-feira.
+              ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
+              segunda-feira.
             </div>
 
             <div style={{ margin: "20px 0", textAlign: "center" }}>
               {(() => {
-                const { isSegunda, podeCheckIn, podeCheckOut } = validarHorarioPonto();
+                const { isSegunda, podeCheckIn, podeCheckOut } =
+                  validarHorarioPonto();
 
                 if (!isSegunda) {
                   return (
                     <div
                       className="info-banner"
-                      style={{ color: "var(--text-dim)", background: "transparent" }}
+                      style={{
+                        color: "var(--text-dim)",
+                        background: "transparent",
+                      }}
                     >
                       ⚠️ O sistema de presença está fechado hoje.
                     </div>
@@ -318,7 +364,10 @@ export default function App() {
                         if (podeCheckIn) {
                           baterPonto();
                         } else {
-                          exibirPopup("🕒 Janela de Check-in: 18:00 às 20:30.", "aviso");
+                          exibirPopup(
+                            "🕒 Janela de Check-in: 18:00 às 20:30.",
+                            "aviso",
+                          );
                         }
                       }}
                     >
@@ -335,7 +384,10 @@ export default function App() {
                         if (podeCheckOut) {
                           setFeedback({ ...feedback, modal: true });
                         } else {
-                          exibirPopup("🕒 Janela de Check-out: 22:00 às 22:30.", "aviso");
+                          exibirPopup(
+                            "🕒 Janela de Check-out: 22:00 às 22:30.",
+                            "aviso",
+                          );
                         }
                       }}
                     >
@@ -344,12 +396,15 @@ export default function App() {
                   );
                 }
 
-                return <div className="ponto-concluido">✔ Presença confirmada</div>;
+                return (
+                  <div className="ponto-concluido">✔ Presença confirmada</div>
+                );
               })()}
             </div>
             <p className="usability-info">
               Registro processado pelo horário de Brasília.
-              <br /><br />
+              <br />
+              <br />
               <strong>🕒 Janela de Check-in:</strong> 18:00 às 20:30
               <br />
               <strong>🕒 Janela de Check-out:</strong> 22:00 às 22:30
@@ -362,11 +417,24 @@ export default function App() {
               <div className="stat-value">{totalPresencas}</div>
             </div>
 
-            <div className="stat-card" style={{ marginTop: "12px", textAlign: "left" }}>
+            <div
+              className="stat-card"
+              style={{ marginTop: "12px", textAlign: "left" }}
+            >
               <span className="stat-label">📅 Próximas Aulas</span>
-              <ul style={{ listStyle: "none", padding: 0, marginTop: "10px", fontSize: "0.85rem" }}>
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  marginTop: "10px",
+                  fontSize: "0.85rem",
+                }}
+              >
                 {getProximasSegundas(user.formacao).map((data, i) => (
-                  <li key={i} style={{ marginBottom: "5px", color: "var(--text-normal)" }}>
+                  <li
+                    key={i}
+                    style={{ marginBottom: "5px", color: "var(--text-normal)" }}
+                  >
                     ● {data} — 18:30h
                   </li>
                 ))}
@@ -380,13 +448,19 @@ export default function App() {
 
             <div className="stat-card">
               <span className="stat-label">Status da Sessão</span>
-              <div className="stat-value text-success" style={{ fontSize: "1.2rem" }}>
+              <div
+                className="stat-value text-success"
+                style={{ fontSize: "1.2rem" }}
+              >
                 Ativa
               </div>
             </div>
           </div>
 
-          <div id="historico-section" className="historico-container shadow-card">
+          <div
+            id="historico-section"
+            className="historico-container shadow-card"
+          >
             <h3>Meu Histórico Completo</h3>
             <div className="table-responsive">
               <table className="historico-table">
@@ -400,7 +474,13 @@ export default function App() {
                 <tbody>
                   {historico.length === 0 ? (
                     <tr>
-                      <td colSpan="3" style={{ textAlign: "center", color: "var(--text-dim)" }}>
+                      <td
+                        colSpan="3"
+                        style={{
+                          textAlign: "center",
+                          color: "var(--text-dim)",
+                        }}
+                      >
                         Nenhum registro encontrado.
                       </td>
                     </tr>
@@ -408,10 +488,25 @@ export default function App() {
                     historico.map((h, i) => (
                       <tr key={i}>
                         <td>
-                          {new Date(h.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
+                          {new Date(h.data).toLocaleDateString("pt-BR", {
+                            timeZone: "UTC",
+                          })}
                         </td>
-                        <td>{h.check_in || "--:--"}</td>
-                        <td>{h.check_out || "--:--"}</td>
+                        {/* Tratamento para exibir apenas HH:mm mesmo com timestamp completo */}
+                        <td>
+                          {h.check_in
+                            ? h.check_in.includes("T")
+                              ? h.check_in.split("T")[1].substring(0, 5)
+                              : h.check_in.substring(0, 5)
+                            : "--:--"}
+                        </td>
+                        <td>
+                          {h.check_out
+                            ? h.check_out.includes("T")
+                              ? h.check_out.split("T")[1].substring(0, 5)
+                              : h.check_out.substring(0, 5)
+                            : "--:--"}
+                        </td>
                       </tr>
                     ))
                   )}
@@ -431,7 +526,12 @@ export default function App() {
             </p>
             <div
               className="rating-group"
-              style={{ display: "flex", gap: "10px", margin: "15px 0", justifyContent: "center" }}
+              style={{
+                display: "flex",
+                gap: "10px",
+                margin: "15px 0",
+                justifyContent: "center",
+              }}
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
@@ -447,12 +547,16 @@ export default function App() {
               className="input-notes"
               placeholder="Algum comentário ou dúvida?"
               value={feedback.revisao}
-              onChange={(e) => setFeedback({ ...feedback, revisao: e.target.value })}
+              onChange={(e) =>
+                setFeedback({ ...feedback, revisao: e.target.value })
+              }
             />
             <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
               <button
                 className="btn-ponto in"
-                onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}
+                onClick={() =>
+                  baterPonto({ nota: feedback.nota, revisao: feedback.revisao })
+                }
               >
                 Confirmar Saída
               </button>

@@ -149,6 +149,8 @@ app.put("/api/aluno/perfil", async (req, res) => {
 app.post("/api/ponto", async (req, res) => {
   const { aluno_id, nota, revisao } = req.body;
   const { data: hoje, hora: agora } = getBrasiliaTime();
+  // Criamos o formato ISO completo para satisfazer o tipo 'timestamp' do banco
+  const timestampCompleto = `${hoje}T${agora}`; 
   const emailBusca = aluno_id.trim().toLowerCase();
 
   try {
@@ -162,19 +164,21 @@ app.post("/api/ponto", async (req, res) => {
     if (fetchError) throw fetchError;
 
     if (!pontoExistente) {
+      // CHECK-IN
       const { data: novoPonto, error: insError } = await supabase
         .from("presencas")
         .insert([{
           aluno_email: emailBusca,
           data: hoje,
-          check_in: agora,
+          check_in: timestampCompleto, // Agora enviamos Data + Hora
           cpf: "REGISTRO_SISTEMA" 
         }])
-        .select(); // Força o retorno para o front
+        .select();
 
       if (insError) throw insError;
       return res.json({ msg: "Check-in realizado com sucesso!", ponto: novoPonto[0] });
     } else {
+      // CHECK-OUT
       if (pontoExistente.check_out) {
         return res.json({ msg: "Você já concluiu sua presença de hoje." });
       }
@@ -182,7 +186,7 @@ app.post("/api/ponto", async (req, res) => {
       const { data: pontoAtualizado, error: updError } = await supabase
         .from("presencas")
         .update({
-          check_out: agora,
+          check_out: timestampCompleto, // Agora enviamos Data + Hora
           feedback_nota: nota || null,
           feedback_texto: revisao || "",
         })

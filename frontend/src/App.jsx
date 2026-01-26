@@ -65,6 +65,22 @@ export default function App() {
 
   const [alarmeAtivo] = useState(true);
 
+  // ESTILO PERSONALIZADO PARA O POPUP TEAL/PRETO/BRANCO
+  const popupStyles = {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    backgroundColor: '#008080', // Teal
+    color: '#ffffff', // Branco
+    padding: '15px 25px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+    borderLeft: '5px solid #000000', // Preto
+    zIndex: 9999,
+    fontWeight: 'bold',
+    animation: 'slideIn 0.5s ease-out'
+  };
+
   const exibirPopup = (msg, tipo) => {
     setPopup({ show: true, msg, tipo });
     setTimeout(() => setPopup({ show: false, msg: "", tipo: "" }), 5000);
@@ -85,9 +101,8 @@ export default function App() {
           "📢 Hora da aula! Não esqueça de fazer seu Check-in.",
           "aviso",
         );
-        // Toca um som discreto se quiser ou apenas o popup
       }
-    }, 10000); // Checa a cada 10 segundos para poupar processamento
+    }, 10000);
     return () => clearInterval(timer);
   }, [alarmeAtivo]);
 
@@ -99,8 +114,10 @@ export default function App() {
     const horaDecimal = hora + minutos / 60;
 
     const isSegunda = diaSemana === 1;
-    const podeCheckIn = isSegunda && horaDecimal <= 20.5; // Até 20:30
-    const podeCheckOut = isSegunda && horaDecimal >= 22; // Após 22:00
+    // Check-in: 18h às 20h30 (20.5)
+    const podeCheckIn = isSegunda && horaDecimal >= 18 && horaDecimal <= 20.5;
+    // Check-out: 22h às 22h30 (22.5)
+    const podeCheckOut = isSegunda && horaDecimal >= 22 && horaDecimal <= 22.5;
 
     return { isSegunda, podeCheckIn, podeCheckOut };
   };
@@ -134,7 +151,7 @@ export default function App() {
         body: JSON.stringify({
           email: form.email,
           dataNascimento: form.dataNasc,
-          formacao: form.formacao, // Enviando a formação selecionada
+          formacao: form.formacao,
         }),
       });
       const data = await res.json();
@@ -145,15 +162,13 @@ export default function App() {
       }
 
       setUser(data);
-
-      // CORREÇÃO AQUI: Salvar o objeto completo para o "Bem-vindo de volta"
       localStorage.setItem(
         "gt3_remember",
         JSON.stringify({
           email: data.email,
           dataNasc: data.data_nascimento,
-          nome: data.nome, // Agora salva o nome
-          formacao: data.formacao, // Agora salva a formação (id)
+          nome: data.nome,
+          formacao: data.formacao,
         }),
       );
 
@@ -165,14 +180,14 @@ export default function App() {
       exibirPopup("Erro de conexão com o servidor", "erro");
     }
   };
-  // AJUSTE: Bater Ponto enviando o Email
+
   const baterPonto = async (extra = {}) => {
     try {
       const res = await fetch(`${API_URL}/ponto`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          aluno_id: user.email, // Enviando o email para a coluna aluno_email no backend
+          aluno_id: user.email,
           ...extra,
         }),
       });
@@ -182,6 +197,14 @@ export default function App() {
         return;
       }
       exibirPopup(data.msg, "sucesso");
+
+      // Popup adicional após o Check-in informando sobre o Check-out
+      if (!extra.nota) { 
+         setTimeout(() => {
+            exibirPopup("📌 Lembrete: O Check-out deve ser feito entre 22:00 e 22:30.", "aviso");
+         }, 1000);
+      }
+
       setFeedback({ nota: 0, revisao: "", modal: false });
       carregarHistorico();
     } catch {
@@ -215,8 +238,11 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
+      {/* POPUP PERSONALIZADO MODERNO */}
       {popup.show && (
-        <div className={`custom-popup ${popup.tipo}`}>{popup.msg}</div>
+        <div style={popupStyles} className="custom-popup-modern">
+          {popup.msg}
+        </div>
       )}
 
       <header className="glass-header">
@@ -284,12 +310,9 @@ export default function App() {
           <div className="aula-card shadow-card">
             <div className="card-header-info">
               <p style={{ color: "var(--text-dim)" }}>
-                {" "}
-                {/* Mudado para cinza */}
                 {new Date().toLocaleDateString("pt-BR")}
               </p>
-              <h2 style={{ color: "var(--text-dim)" }}>Olá, {user.nome}!</h2>{" "}
-              {/* Mudado para cinza */}
+              <h2 style={{ color: "var(--text-dim)" }}>Olá, {user.nome}!</h2>
             </div>
 
             <div
@@ -308,7 +331,6 @@ export default function App() {
                 const { isSegunda, podeCheckIn, podeCheckOut } =
                   validarHorarioPonto();
 
-                // Se não for segunda, mostramos apenas o informativo cinza
                 if (!isSegunda) {
                   return (
                     <div
@@ -319,17 +341,22 @@ export default function App() {
                       }}
                     >
                       ⚠️ O sistema de presença está fechado. Retorne na
-                      segunda-feira a partir das 18:30.
+                      segunda-feira a partir das 18:00.
                     </div>
                   );
                 }
 
-                // Se for segunda, a lógica dos botões permanece
                 if (!pontoHoje?.check_in) {
                   return (
                     <button
                       className="btn-ponto in"
-                      onClick={() => baterPonto()}
+                      onClick={() => {
+                        if (podeCheckIn) {
+                          baterPonto();
+                        } else {
+                          exibirPopup("🕒 O Check-in é permitido apenas entre 18h e 20h30.", "aviso");
+                        }
+                      }}
                       disabled={!podeCheckIn}
                     >
                       {podeCheckIn ? "CHECK-IN" : "O Check-in encerrou às (20:30)"}
@@ -340,7 +367,13 @@ export default function App() {
                   return (
                     <button
                       className="btn-ponto out"
-                      onClick={() => setFeedback({ ...feedback, modal: true })}
+                      onClick={() => {
+                        if (podeCheckOut) {
+                          setFeedback({ ...feedback, modal: true });
+                        } else {
+                          exibirPopup("🕒 O Check-out é permitido apenas entre 22h e 22h30.", "aviso");
+                        }
+                      }}
                       disabled={!podeCheckOut}
                       style={{
                         opacity: podeCheckOut ? 1 : 0.5,
@@ -363,6 +396,10 @@ export default function App() {
               Seu registro será processado de acordo com o horário do servidor
               (Brasília). Certifique-se de realizar o check-out ao final da aula
               para validar sua participação.
+              <br /><br />
+              <strong>🕒 Janela de Check-in:</strong> 18:00 às 20:30
+              <br />
+              <strong>🕒 Janela de Check-out:</strong> 22:00 às 22:30
             </p>
           </div>
 

@@ -191,8 +191,11 @@ export default function App() {
   }
 
   // --- LÓGICA DE COMPARAÇÃO DE DATA CORRIGIDA ---
-  const hojeISO = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }).split('/').reverse().join('-');
-  const pontoHoje = historico.find((h) => h.data.substring(0, 10) === hojeISO);
+  const hojeISO = new Date().toLocaleDateString("en-CA"); 
+  const pontoHoje = historico.find((h) => {
+    const dataRegistro = h.data?.substring(0, 10);
+    return dataRegistro === hojeISO;
+  });
   
   const totalPresencas = historico.length;
   const totalFaltas = 0;

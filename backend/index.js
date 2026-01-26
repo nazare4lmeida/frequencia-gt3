@@ -327,11 +327,12 @@ app.get('/api/admin/stats/:turma', async (req, res) => {
 app.get("/api/admin/relatorio/:turma", async (req, res) => {
   const { turma } = req.params;
   try {
-    // Seleciona os dados do aluno E traz as presenças relacionadas
+    // Buscamos na tabela ALUNOS e fazemos o JOIN com presencas pelo email
     let query = supabase
       .from("alunos")
       .select("nome, email, cpf, formacao, presencas(data, check_in, check_out)");
 
+    // Filtramos a turma pela tabela de ALUNOS, onde os dados existem
     if (turma !== "todos") {
       query = query.eq("formacao", turma);
     }

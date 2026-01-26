@@ -182,10 +182,8 @@ export default function App() {
 
   const baterPonto = async (extra = {}) => {
     if (!user || !user.email)
-      return exibirPopup(
-        "Sessão expirada. Por favor, faça login novamente.",
-        "erro",
-      );
+      return exibirPopup("Sessão expirada. Faça login novamente.", "erro");
+
     try {
       const res = await fetch(`${API_URL}/ponto`, {
         method: "POST",
@@ -195,13 +193,18 @@ export default function App() {
           ...extra,
         }),
       });
+
       const data = await res.json();
-      if (!res.ok)
+
+      if (!res.ok) {
+        // Se der erro 500, o 'data.error' vai nos dizer o motivo exato nos logs
         return exibirPopup(data.error || "Erro ao registrar ponto.", "erro");
+      }
 
       exibirPopup(data.msg, "sucesso");
 
-      // ADICIONE ESTA LINHA AQUI:
+      // FORÇA O RECONHECIMENTO DA PRESENÇA:
+      // Isso busca os dados novos do Supabase e atualiza o estado 'historico'
       await carregarHistorico();
 
       if (!extra.nota) {

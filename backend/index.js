@@ -232,18 +232,22 @@ app.get("/api/admin/busca", async (req, res) => {
   }
 });
 
-// Rota para Atualizar Dados do Aluno pelo Admin
-app.put("/api/admin/aluno/:id", async (req, res) => {
+// Rota para Atualizar Dados do Aluno pelo Admin usando EMAIL
+app.put("/api/admin/aluno/:email", async (req, res) => {
   const { nome, email, cpf } = req.body;
+  const emailOriginal = decodeURIComponent(req.params.email); // O e-mail que já estava no banco
+
   try {
     const { error } = await supabase
       .from("alunos")
       .update({ nome, email, cpf })
-      .eq("id", req.params.id);
+      .eq("email", emailOriginal);
+      
     if (error) throw error;
     res.json({ msg: "Dados atualizados com sucesso" });
   } catch (err) {
-    res.status(500).json({ error: "Erro ao atualizar aluno." });
+    console.error(err);
+    res.status(500).json({ error: "Erro ao atualizar aluno no banco de dados." });
   }
 });
 

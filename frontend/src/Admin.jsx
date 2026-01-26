@@ -35,7 +35,7 @@ export default function Admin() {
     carregarStats();
   }, [filtroTurma]);
 
-  // 2. Lógica de busca e filtros envolta em useCallback para evitar alertas de dependência
+  // 2. Lógica de busca e filtros (USANDO useCallback para corrigir erro de dependência)
   const buscarAlunos = useCallback(async (termo) => {
     setCarregando(true);
     try {
@@ -82,22 +82,33 @@ export default function Admin() {
     }
   };
 
-  // 4. Salvar Edição
+  // 4. Salvar Edição (CORRIGIDO: Envia o e-mail original para identificar na tabela)
   const salvarEdicao = async () => {
+    const emailOriginal = alunoSelecionado.email;
+    
+    if (!emailOriginal) {
+      alert("Erro: Não foi possível identificar o aluno.");
+      return;
+    }
+
     setCarregando(true);
     try {
-      const res = await fetch(`${API_URL}/admin/aluno/${alunoSelecionado.id}`, {
+      const res = await fetch(`${API_URL}/admin/aluno/${encodeURIComponent(emailOriginal)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dadosEdicao)
       });
+      
       if (res.ok) {
-        alert("Dados atualizados!");
+        alert("Dados atualizados com sucesso!");
         setModalAberto(false);
-        buscarAlunos(busca);
+        buscarAlunos(busca); // Atualiza a lista na tela
+      } else {
+        const erro = await res.json();
+        alert(`Erro: ${erro.error}`);
       }
     } catch {
-      alert("Erro ao salvar.");
+      alert("Erro ao salvar alterações no servidor.");
     } finally {
       setCarregando(false);
     }
@@ -164,7 +175,6 @@ export default function Admin() {
   return (
     <div className="app-wrapper" style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px' }}>
       
-      {/* HEADER E BARRA DE PROGRESSO LIVE */}
       <div style={{ marginBottom: '30px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -187,7 +197,6 @@ export default function Admin() {
         </p>
       </div>
 
-      {/* CARDS DE STATS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
         <div className="stat-card" style={{ padding: '20px', textAlign: 'center', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>CHECK-INS HOJE</span>
@@ -204,7 +213,6 @@ export default function Admin() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px' }}>
-        
         <div className="shadow-card" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
             <input 
@@ -230,7 +238,7 @@ export default function Admin() {
                 </thead>
                 <tbody>
                   {alunos.map(aluno => (
-                    <tr key={aluno.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <tr key={aluno.email} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{ padding: '12px 0' }}>
                         <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{aluno.nome}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>CPF: {aluno.cpf || 'Não informado'}</div>
@@ -254,10 +262,8 @@ export default function Admin() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="shadow-card" style={{ padding: '20px' }}>
             <h4>Relatórios</h4>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', margin: '10px 0' }}>Baixe a lista de chamadas completa para auditoria.</p>
             <button className="btn-ponto in" style={{ width: '100%' }} onClick={exportarCSV}>Exportar CSV</button>
           </div>
-
           <div className="shadow-card" style={{ padding: '20px', borderLeft: '4px solid #f59e0b' }}>
             <h4 style={{ color: '#f59e0b' }}>Lembrete Rápido</h4>
             <p style={{ fontSize: '0.75rem' }}>Use o filtro "Esqueceram Saída" para identificar quem não fechou o ponto na última aula.</p>
@@ -268,7 +274,6 @@ export default function Admin() {
       {modalAberto && alunoSelecionado && (
         <div className="modal-overlay">
           <div className="modal-content shadow-card" style={{ maxWidth: '600px', width: '95%' }}>
-            
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
               <h3>{alunoSelecionado.nome}</h3>
               <div style={{ display: 'flex', gap: '5px' }}>
@@ -300,7 +305,7 @@ export default function Admin() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ padding: '15px', background: 'var(--bg-dim)', borderRadius: '8px' }}>
+                <div style={{ padding: '15px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
                   <h5 style={{ marginTop: 0 }}>✏️ Editar Cadastro</h5>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <input className="input-modern" value={dadosEdicao.nome} onChange={e => setDadosEdicao({...dadosEdicao, nome: e.target.value})} placeholder="Nome" />
@@ -310,7 +315,7 @@ export default function Admin() {
                   <button className="btn-secondary" style={{ marginTop: '5px', width: '100%', border: '1px solid #ef4444', color: '#ef4444' }} onClick={() => resetarSessao(alunoSelecionado.email)}>Forçar Deslogar Aluno</button>
                 </div>
 
-                <div style={{ padding: '15px', background: 'var(--bg-dim)', borderRadius: '8px' }}>
+                <div style={{ padding: '15px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
                   <h5 style={{ marginTop: 0 }}>➕ Inserir Ponto Manual</h5>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                     <input type="date" className="input-modern" value={manualPonto.data} onChange={e => setManualPonto({...manualPonto, data: e.target.value})} />
@@ -321,7 +326,6 @@ export default function Admin() {
                 </div>
               </div>
             )}
-            
             <button className="btn-secondary" style={{ width: '100%', marginTop: '20px' }} onClick={() => setModalAberto(false)}>Fechar Janela</button>
           </div>
         </div>

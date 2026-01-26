@@ -144,439 +144,330 @@ export default function App() {
   }, [user?.email, carregarHistorico]);
 
   const handleLogin = async () => {
-    try {
-      const res = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          dataNascimento: form.dataNasc,
-          formacao: form.formacao,
-        }),
-      });
-      
-      const data = await res.json();
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          dataNascimento: form.dataNasc,
+          formacao: form.formacao,
+        }),
+      });
+      
+      const data = await res.json();
 
-      if (!res.ok) {
-        exibirPopup(data.error || "Erro no login, tente novamente com as credenciais corretas.", "erro");
-        return;
-      }
+      if (!res.ok) {
+        exibirPopup(data.error || "Erro no login, tente novamente.", "erro");
+        return;
+      }
 
-      // --- CONTROLE DE CONFLITO DE SESSÃO LOCAL ---
-      const sessaoExistente = localStorage.getItem("gt3_session");
-      if (sessaoExistente) {
-        try {
-          const { userData } = JSON.parse(sessaoExistente);
-          if (userData && userData.email !== data.email) {
-            // Se um novo aluno tentar logar sem o anterior ter saído, limpa o rastro do anterior
-            localStorage.removeItem("gt3_session");
-          }
-        } catch {
-          // Se o dado no localStorage estiver corrompido, apenas removemos
-          localStorage.removeItem("gt3_session");
-        }
-      }
-      // --------------------------------------------
+      // --- CONTROLE DE CONFLITO DE SESSÃO LOCAL ---
+      localStorage.removeItem("gt3_session"); 
+      // --------------------------------------------
 
-      setUser(data);
-      
-      // Atualiza o "Lembrar-me" com os dados validados pelo banco
-      localStorage.setItem(
-        "gt3_remember",
-        JSON.stringify({
-          email: data.email,
-          dataNasc: data.data_nascimento,
-          nome: data.nome,
-          formacao: data.formacao,
-        }),
-      );
+      setUser(data);
+      
+      // Atualiza o "Lembrar-me" (Garante que campos nulos não quebrem o JSON)
+      localStorage.setItem(
+        "gt3_remember",
+        JSON.stringify({
+          email: data.email,
+          dataNasc: data.data_nascimento,
+          nome: data.nome || "",
+          formacao: data.formacao,
+        }),
+      );
 
-      // Define a sessão ativa (expira em 12h conforme sua lógica no useState)
-      localStorage.setItem(
-        "gt3_session",
-        JSON.stringify({ userData: data, timestamp: Date.now() }),
-      );
+      // Define a sessão ativa
+      localStorage.setItem(
+        "gt3_session",
+        JSON.stringify({ userData: data, timestamp: Date.now() }),
+      );
 
-    } catch (err) {
-      console.error("Erro no login front:", err);
-      exibirPopup("Erro de conexão com o servidor", "erro");
-    }
-  };
+    } catch (err) {
+      console.error("Erro no login front:", err);
+      exibirPopup("Erro de conexão com o servidor", "erro");
+    }
+  };
 
-  const baterPonto = async (extra = {}) => {
-    // Verificação de segurança para evitar erro 500 no backend
-    if (!user || !user.email) {
-      exibirPopup("Sessão expirada. Por favor, faça login novamente.", "erro");
-      return;
-    }
+  const baterPonto = async (extra = {}) => {
+    if (!user || !user.email) {
+      exibirPopup("Sessão expirada. Por favor, faça login novamente.", "erro");
+      return;
+    }
 
-    try {
-      const res = await fetch(`${API_URL}/ponto`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          aluno_id: user.email.trim().toLowerCase(), // Garante e-mail limpo
-          ...extra,
-        }),
-      });
-      const data = await res.json();
-      
-      if (!res.ok) {
-        exibirPopup(data.error || "Erro ao registrar ponto.", "erro");
-        return;
-      }
-      
-      exibirPopup(data.msg, "sucesso");
+    try {
+      const res = await fetch(`${API_URL}/ponto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aluno_id: user.email.trim().toLowerCase(),
+          ...extra,
+        }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        exibirPopup(data.error || "Erro ao registrar ponto.", "erro");
+        return;
+      }
+      
+      exibirPopup(data.msg, "sucesso");
 
-      if (!extra.nota) { 
-          setTimeout(() => {
-            exibirPopup("📌 Lembrete: O Check-out deve ser feito hoje entre 22:00 e 22:30.", "aviso");
-          }, 1000);
-      }
+      if (!extra.nota) { 
+          setTimeout(() => {
+            exibirPopup("📌 Lembrete: O Check-out deve ser hoje entre 22:00 e 22:30.", "aviso");
+          }, 1000);
+      }
 
-      setFeedback({ nota: 0, revisao: "", modal: false });
-      carregarHistorico();
-    } catch (err) {
-      console.error("Erro bater ponto:", err);
-      exibirPopup("Erro de comunicação com o servidor.", "erro");
-    }
-  };
+      setFeedback({ nota: 0, revisao: "", modal: false });
+      carregarHistorico();
+    } catch (err) {
+      console.error("Erro bater ponto:", err);
+      exibirPopup("Erro de comunicação com o servidor.", "erro");
+    }
+  };
 
-  useEffect(() => {
-    document.body.classList.toggle("dark", isDarkMode);
-    localStorage.setItem("gt3_theme", JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
+  useEffect(() => {
+    document.body.classList.toggle("dark", isDarkMode);
+    localStorage.setItem("gt3_theme", JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
 
-  if (!user) {
-    return (
-      <Login
-        form={form}
-        setForm={setForm}
-        handleLogin={handleLogin}
-        dadosSalvos={dadosSalvos}
-        setDadosSalvos={setDadosSalvos}
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
-      />
-    );
-  }
+  if (!user) {
+    return (
+      <Login
+        form={form}
+        setForm={setForm}
+        handleLogin={handleLogin}
+        dadosSalvos={dadosSalvos}
+        setDadosSalvos={setDadosSalvos}
+        isDarkMode={isDarkMode}
+        setIsDarkMode={setIsDarkMode}
+      />
+    );
+  }
 
-  const hoje = new Date().toLocaleDateString("en-CA");
-  const pontoHoje = historico.find((h) => h.data.split("T")[0] === hoje);
-  const totalPresencas = historico.length;
-  const totalFaltas = 0;
+  const hoje = new Date().toLocaleDateString("en-CA");
+  const pontoHoje = historico.find((h) => h.data.split("T")[0] === hoje);
+  const totalPresencas = historico.length;
+  const totalFaltas = 0;
 
-  return (
-    <div className="app-wrapper">
-      {/* POPUP PERSONALIZADO MODERNO */}
-      {popup.show && (
-        <div style={popupStyles} className="custom-popup-modern">
-          {popup.msg}
-        </div>
-      )}
+  // Lógica para exibir o e-mail caso o nome ainda não tenha sido preenchido no perfil
+  const nomeExibicao = user.nome || user.email.split('@')[0];
 
-      <header className="glass-header">
-        <div
-          className="brand-logo"
-          onClick={() => setView("home")}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="logo-circle">GT 3.0</div>
-          <div className="brand-text">
-            Registro de Frequência
-            <span>Geração Tech 3.0</span>
-          </div>
-          <div className="user-badge">
-            {user.role === "admin" ? "Admin" : "Aluno"}
-          </div>
-        </div>
-        <div className="header-right">
-          <span className="clock">🕒 {currentTime}</span>
-          <div className="nav-actions">
-            {user.role === "admin" && (
-              <button
-                className="btn-secondary"
-                onClick={() => setView(view === "admin" ? "home" : "admin")}
-              >
-                {view === "admin" ? "Início" : "Painel Admin"}
-              </button>
-            )}
-            <button
-              className="btn-action-circle"
-              onClick={() => setView("perfil")}
-            >
-              👤
-            </button>
-            <button
-              className="btn-action-circle"
-              title="Alternar Tema"
-              onClick={() => setIsDarkMode(!isDarkMode)}
-            >
-              {isDarkMode ? "○" : "●"}
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                localStorage.removeItem("gt3_session");
-                setUser(null);
-              }}
-            >
-              Sair
-            </button>
-          </div>
-        </div>
-      </header>
+  return (
+    <div className="app-wrapper">
+      {popup.show && (
+        <div style={popupStyles} className="custom-popup-modern">
+          {popup.msg}
+        </div>
+      )}
 
-      {view === "admin" && user.role === "admin" ? (
-        <Admin />
-      ) : view === "perfil" ? (
-        <Perfil
-          user={user}
-          setUser={setUser}
-          onVoltar={() => setView("home")}
-        />
-      ) : (
-        <main className="content-grid">
-          <div className="aula-card shadow-card">
-            <div className="card-header-info">
-              <p style={{ color: "var(--text-dim)" }}>
-                {new Date().toLocaleDateString("pt-BR")}
-              </p>
-              <h2 style={{ color: "var(--text-dim)" }}>Olá, {user.nome}!</h2>
-            </div>
+      <header className="glass-header">
+        <div
+          className="brand-logo"
+          onClick={() => setView("home")}
+          style={{ cursor: "pointer" }}
+        >
+          <div className="logo-circle">GT 3.0</div>
+          <div className="brand-text">
+            Registro de Frequência
+            <span>Geração Tech 3.0</span>
+          </div>
+          <div className="user-badge">
+            {user.role === "admin" ? "Admin" : "Aluno"}
+          </div>
+        </div>
+        <div className="header-right">
+          <span className="clock">🕒 {currentTime}</span>
+          <div className="nav-actions">
+            {user.role === "admin" && (
+              <button
+                className="btn-secondary"
+                onClick={() => setView(view === "admin" ? "home" : "admin")}
+              >
+                {view === "admin" ? "Início" : "Painel Admin"}
+              </button>
+            )}
+            <button
+              className="btn-action-circle"
+              onClick={() => setView("perfil")}
+            >
+              👤
+            </button>
+            <button
+              className="btn-action-circle"
+              title="Alternar Tema"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+            >
+              {isDarkMode ? "○" : "●"}
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                localStorage.removeItem("gt3_session");
+                setUser(null);
+              }}
+            >
+              Sair
+            </button>
+          </div>
+        </div>
+      </header>
 
-            <div
-              className="info-banner"
-              style={{
-                color: "var(--text-dim)",
-                border: "1px solid var(--border-subtle)",
-              }}
-            >
-              ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
-              segunda-feira.
-            </div>
+      {view === "admin" && user.role === "admin" ? (
+        <Admin />
+      ) : view === "perfil" ? (
+        <Perfil
+          user={user}
+          setUser={setUser}
+          onVoltar={() => setView("home")}
+        />
+      ) : (
+        <main className="content-grid">
+          <div className="aula-card shadow-card">
+            <div className="card-header-info">
+              <p style={{ color: "var(--text-dim)" }}>
+                {new Date().toLocaleDateString("pt-BR")}
+              </p>
+              <h2 style={{ color: "var(--text-dim)" }}>Olá, {nomeExibicao}!</h2>
+            </div>
 
-            <div style={{ margin: "20px 0", textAlign: "center" }}>
-              {(() => {
-                const { isSegunda, podeCheckIn, podeCheckOut } =
-                  validarHorarioPonto();
+            <div
+              className="info-banner"
+              style={{
+                color: "var(--text-dim)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de segunda-feira.
+            </div>
 
-                if (!isSegunda) {
-                  return (
-                    <div
-                      className="info-banner"
-                      style={{
-                        color: "var(--text-dim)",
-                        background: "transparent",
-                      }}
-                    >
-                      ⚠️ O sistema de presença está fechado. Retorne na
-                      segunda-feira a partir das 18:00.
-                    </div>
-                  );
-                }
+            <div style={{ margin: "20px 0", textAlign: "center" }}>
+              {(() => {
+                const { isSegunda, podeCheckIn, podeCheckOut } = validarHorarioPonto();
 
-                // CHECK-IN: Botão sempre ativo para evitar "encerrado" precoce, mas valida via popup
-                if (!pontoHoje?.check_in) {
-                  return (
-                    <button
-                      className="btn-ponto in"
-                      onClick={() => {
-                        if (podeCheckIn) {
-                          baterPonto();
-                        } else {
-                          exibirPopup("🕒 Atenção: O Check-in só é permitido entre 18:00 e 20:30.", "aviso");
-                        }
-                      }}
-                    >
-                      CHECK-IN
-                    </button>
-                  );
-                }
+                if (!isSegunda) {
+                  return (
+                    <div className="info-banner" style={{ color: "var(--text-dim)", background: "transparent" }}>
+                      ⚠️ O sistema de presença está fechado hoje.
+                    </div>
+                  );
+                }
 
-                // CHECK-OUT: Botão sempre ativo após check-in, validando horário via popup
-                if (!pontoHoje?.check_out) {
-                  return (
-                    <button
-                      className="btn-ponto out"
-                      onClick={() => {
-                        if (podeCheckOut) {
-                          setFeedback({ ...feedback, modal: true });
-                        } else {
-                          exibirPopup("🕒 Atenção: O Check-out só é permitido entre 22:00 e 22:30.", "aviso");
-                        }
-                      }}
-                    >
-                      CHECK-OUT
-                    </button>
-                  );
-                }
+                if (!pontoHoje?.check_in) {
+                  return (
+                    <button
+                      className="btn-ponto in"
+                      onClick={() => podeCheckIn ? baterPonto() : exibirPopup("🕒 Janela de Check-in: 18:00 às 20:30.", "aviso")}
+                    >
+                      CHECK-IN
+                    </button>
+                  );
+                }
 
-                return (
-                  <div className="ponto-concluido">✔ Presença confirmada</div>
-                );
-              })()}
-            </div>
-            <p className="usability-info">
-              Seu registro será processado de acordo com o horário do servidor
-              (Brasília). Certifique-se de realizar o check-out ao final da aula
-              para validar sua participação.
-              <br /><br />
-              <strong>🕒 Janela de Check-in:</strong> 18:00 às 20:30
-              <br />
-              <strong>🕒 Janela de Check-out:</strong> 22:00 às 22:30
-            </p>
-          </div>
+                if (!pontoHoje?.check_out) {
+                  return (
+                    <button
+                      className="btn-ponto out"
+                      onClick={() => podeCheckOut ? setFeedback({ ...feedback, modal: true }) : exibirPopup("🕒 Janela de Check-out: 22:00 às 22:30.", "aviso")}
+                    >
+                      CHECK-OUT
+                    </button>
+                  );
+                }
 
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-label">Total de Presenças</span>
-              <div className="stat-value">{totalPresencas}</div>
-            </div>
+                return (
+                  <div className="ponto-concluido">✔ Presença confirmada</div>
+                );
+              })()}
+            </div>
+            <p className="usability-info">
+              Registro processado pelo horário de Brasília.
+              <br /><br />
+              <strong>🕒 Janela de Check-in:</strong> 18:00 às 20:30
+              <br />
+              <strong>🕒 Janela de Check-out:</strong> 22:00 às 22:30
+            </p>
+          </div>
 
-            <div
-              className="stat-card"
-              style={{ marginTop: "12px", textAlign: "left" }}
-            >
-              <span className="stat-label">📅 Próximas Aulas (Segundas)</span>
-              <ul
-                style={{
-                  listStyle: "none",
-                  padding: 0,
-                  marginTop: "10px",
-                  fontSize: "0.85rem",
-                }}
-              >
-                {getProximasSegundas(user.formacao).map((data, i) => (
-                  <li
-                    key={i}
-                    style={{
-                      marginBottom: "5px",
-                      color: "var(--text-normal)",
-                    }}
-                  >
-                    ● {data} — 18:30h
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-label">Total de Presenças</span>
+              <div className="stat-value">{totalPresencas}</div>
+            </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Total de Faltas</span>
-              <div className="stat-value faltas">{totalFaltas}</div>
-            </div>
+            <div className="stat-card" style={{ marginTop: "12px", textAlign: "left" }}>
+              <span className="stat-label">📅 Próximas Aulas</span>
+              <ul style={{ listStyle: "none", padding: 0, marginTop: "10px", fontSize: "0.85rem" }}>
+                {getProximasSegundas(user.formacao).map((data, i) => (
+                  <li key={i} style={{ marginBottom: "5px", color: "var(--text-normal)" }}>
+                    ● {data} — 18:30h
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Status da Sessão</span>
-              <div
-                className="stat-value text-success"
-                style={{ fontSize: "1.2rem" }}
-              >
-                Ativa
-              </div>
-            </div>
-          </div>
+            <div className="stat-card">
+              <span className="stat-label">Total de Faltas</span>
+              <div className="stat-value faltas">{totalFaltas}</div>
+            </div>
 
-          <div
-            id="historico-section"
-            className="historico-container shadow-card"
-          >
-            <h3>Meu Histórico Completo</h3>
-            <div className="table-responsive">
-              <table className="historico-table">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Entrada</th>
-                    <th>Saída</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historico.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan="3"
-                        style={{
-                          textAlign: "center",
-                          color: "var(--text-dim)",
-                        }}
-                      >
-                        Nenhum registro encontrado.
-                      </td>
-                    </tr>
-                  ) : (
-                    historico.map((h, i) => (
-                      <tr key={i}>
-                        <td>
-                          {new Date(h.data).toLocaleDateString("pt-BR", {
-                            timeZone: "UTC",
-                          })}
-                        </td>
-                        <td>{h.check_in || "--:--"}</td>
-                        <td>{h.check_out || "--:--"}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </main>
-      )}
+            <div className="stat-card">
+              <span className="stat-label">Status da Sessão</span>
+              <div className="stat-value text-success" style={{ fontSize: "1.2rem" }}>Ativa</div>
+            </div>
+          </div>
 
-      {feedback.modal && (
-        <div className="modal-overlay">
-          <div className="modal-content shadow-xl">
-            <h3>Finalizar Check-out</h3>
-            <p className="text-muted" style={{ marginBottom: "15px" }}>
-              Como foi sua experiência na aula de hoje?
-            </p>
-            <div
-              className="rating-group"
-              style={{
-                display: "flex",
-                gap: "10px",
-                margin: "15px 0",
-                justifyContent: "center",
-              }}
-            >
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  className={feedback.nota === n ? "active" : ""}
-                  onClick={() => setFeedback({ ...feedback, nota: n })}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            <textarea
-              className="input-notes"
-              placeholder="Algum comentário ou dúvida sobre o conteúdo?"
-              value={feedback.revisao}
-              onChange={(e) =>
-                setFeedback({ ...feedback, revisao: e.target.value })
-              }
-            />
-            <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
-              <button
-                className="btn-ponto in"
-                onClick={() =>
-                  baterPonto({ nota: feedback.nota, revisao: feedback.revisao })
-                }
-              >
-                Confirmar Saída
-              </button>
-              <button
-                className="btn-secondary"
-                onClick={() => setFeedback({ ...feedback, modal: false })}
-              >
-                Voltar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+          <div id="historico-section" className="historico-container shadow-card">
+            <h3>Meu Histórico Completo</h3>
+            <div className="table-responsive">
+              <table className="historico-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Entrada</th>
+                    <th>Saída</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historico.length === 0 ? (
+                    <tr><td colSpan="3" style={{ textAlign: "center", color: "var(--text-dim)" }}>Nenhum registro encontrado.</td></tr>
+                  ) : (
+                    historico.map((h, i) => (
+                      <tr key={i}>
+                        <td>{new Date(h.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
+                        <td>{h.check_in || "--:--"}</td>
+                        <td>{h.check_out || "--:--"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      )}
+
+      {feedback.modal && (
+        <div className="modal-overlay">
+          <div className="modal-content shadow-xl">
+            <h3>Finalizar Check-out</h3>
+            <p className="text-muted">Como foi sua experiência na aula de hoje?</p>
+            <div className="rating-group" style={{ display: "flex", gap: "10px", margin: "15px 0", justifyContent: "center" }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} className={feedback.nota === n ? "active" : ""} onClick={() => setFeedback({ ...feedback, nota: n })}>{n}</button>
+              ))}
+            </div>
+            <textarea className="input-notes" placeholder="Algum comentário ou dúvida?" value={feedback.revisao} onChange={(e) => setFeedback({ ...feedback, revisao: e.target.value })} />
+            <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+              <button className="btn-ponto in" onClick={() => baterPonto({ nota: feedback.nota, revisao: feedback.revisao })}>Confirmar Saída</button>
+              <button className="btn-secondary" onClick={() => setFeedback({ ...feedback, modal: false })}>Voltar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

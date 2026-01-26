@@ -144,7 +144,7 @@ app.put("/api/aluno/perfil", async (req, res) => {
 });
 
 // ==========================================
-// REGISTRAR PONTO - VERSÃO SIMPLIFICADA
+// REGISTRAR PONTO - CORRIGIDO
 // ==========================================
 app.post("/api/ponto", async (req, res) => {
   const { aluno_id, nota, revisao } = req.body;
@@ -161,39 +161,36 @@ app.post("/api/ponto", async (req, res) => {
 
     if (fetchError) throw fetchError;
 
-    // CHECK-IN: Se não encontrou registro hoje
     if (!pontoExistente) {
-      const { error: insError } = await supabase
+      const { data: novoPonto, error: insError } = await supabase
         .from("presencas")
         .insert([{
           aluno_email: emailBusca,
           data: hoje,
-          check_in: agora, // Salve apenas a hora aqui
+          check_in: agora,
           cpf: "REGISTRO_SISTEMA" 
-        }]);
+        }])
+        .select(); // Força o retorno para o front
 
       if (insError) throw insError;
-      return res.json({ msg: "Check-in realizado com sucesso!" });
-    } 
-    
-    // CHECK-OUT: Se já existe o Check-in
-    else {
-      // CORREÇÃO AQUI: Usar pontoExistente em vez de pontoHoje
+      return res.json({ msg: "Check-in realizado com sucesso!", ponto: novoPonto[0] });
+    } else {
       if (pontoExistente.check_out) {
         return res.json({ msg: "Você já concluiu sua presença de hoje." });
       }
 
-      const { error: updError } = await supabase
+      const { data: pontoAtualizado, error: updError } = await supabase
         .from("presencas")
         .update({
-          check_out: agora, // Salve apenas a hora aqui
+          check_out: agora,
           feedback_nota: nota || null,
           feedback_texto: revisao || "",
         })
-        .eq("id", pontoExistente.id);
+        .eq("id", pontoExistente.id)
+        .select();
 
       if (updError) throw updError;
-      return res.json({ msg: "Check-out realizado com sucesso!" });
+      return res.json({ msg: "Check-out realizado com sucesso!", ponto: pontoAtualizado[0] });
     }
   } catch (err) {
     console.error("ERRO NO PONTO:", err);
@@ -322,15 +319,25 @@ app.get('/api/admin/stats/:turma', async (req, res) => {
   }
 });
 
+// RELATÓRIO ADMIN CORRIGIDO: Busca da tabela de presenças para garantir que apareçam os registros
 app.get("/api/admin/relatorio/:turma", async (req, res) => {
   const { turma } = req.params;
   try {
-    let query = supabase.from("alunos").select("nome, email, cpf, presencas(data)");
-    if (turma !== "todos") query = query.eq("formacao", turma);
+    // Seleciona os dados do aluno E traz as presenças relacionadas
+    let query = supabase
+      .from("alunos")
+      .select("nome, email, cpf, formacao, presencas(data, check_in, check_out)");
+
+    if (turma !== "todos") {
+      query = query.eq("formacao", turma);
+    }
+
     const { data, error } = await query;
     if (error) throw error;
+    
     res.json(data);
   } catch (err) {
+    console.error("ERRO RELATORIO:", err);
     res.status(500).json({ error: "Erro ao gerar relatório." });
   }
 });

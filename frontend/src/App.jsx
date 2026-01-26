@@ -147,24 +147,31 @@ export default function App() {
   }, [user?.email, carregarHistorico]);
 
   const baterPonto = async (extra = {}) => {
-    if (!user || !user.email) return exibirPopup("Sessão expirada. Por favor, faça login novamente.", "erro");
+    if (!user || !user.email) return exibirPopup("Sessão expirada. Faça login novamente.", "erro");
+    
     try {
       const res = await fetch(`${API_URL}/ponto`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ aluno_id: user.email.trim().toLowerCase(), ...extra }),
       });
+      
       const data = await res.json();
+      
       if (!res.ok) return exibirPopup(data.error || "Erro ao registrar ponto.", "erro");
       
       exibirPopup(data.msg, "sucesso");
+      
+      // --- ESSA LINHA É A CHAVE ---
+      // Força o frontend a buscar os dados novos no Supabase imediatamente
+      await carregarHistorico(); 
+      
       if (!extra.nota) {
         setTimeout(() => {
           exibirPopup("📌 Lembrete: O Check-out deve ser feito hoje entre 22:00 e 22:30.", "aviso");
         }, 1000);
       }
       setFeedback({ nota: 0, revisao: "", modal: false });
-      carregarHistorico();
     } catch (err) {
       console.error("Erro bater ponto:", err);
       exibirPopup("Erro de comunicação com o servidor.", "erro");

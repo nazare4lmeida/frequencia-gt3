@@ -722,3 +722,102 @@ input:disabled {
   font-weight: bold;
   margin-top: 5px;
 }
+
+/* ================================================= */
+/* 10. EXTENSÕES DO DASHBOARD ADMINISTRATIVO         */
+/* ================================================= */
+
+/* Barra de Progresso de Adesão Live */
+.admin-progress-container {
+  margin-top: 20px;
+  background: var(--border-subtle);
+  height: 10px;
+  border-radius: 50px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-progress-bar {
+  background: linear-gradient(90deg, var(--teal-primary), #14b8a6);
+  height: 100%;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.3);
+}
+
+/* Pop-up Moderno (Teal, Preto e Branco) */
+.custom-popup-modern {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background-color: #008080; /* Teal */
+  color: #ffffff; /* Branco */
+  padding: 16px 24px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+  border-left: 6px solid #000000; /* Preto */
+  z-index: 9999;
+  font-weight: 700;
+  font-size: 0.9rem;
+  animation: slideInRight 0.4s ease-out;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Seções Internas do Modal de Gestão */
+.admin-modal-section {
+  padding: 15px;
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 20px;
+}
+
+.admin-modal-section h5 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--teal-primary);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+/* Estilo para inputs de data/hora no Admin */
+input[type="date"].input-modern,
+input[type="time"].input-modern {
+  color-scheme: dark; /* Garante que o seletor do navegador siga o tema */
+}
+
+/* Botão de Reset de Sessão (Cuidado) */
+.btn-danger-outline {
+  background: transparent;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-danger-outline:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* Grid de Inputs no Modal */
+.admin-grid-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Responsividade para o Grid do Admin */
+@media (max-width: 900px) {
+  .grid-main {
+    grid-template-columns: 1fr !important;
+  }
+}

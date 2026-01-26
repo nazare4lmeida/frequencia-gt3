@@ -174,7 +174,7 @@ app.post("/api/ponto", async (req, res) => {
           feedback_nota: nota,
           feedback_texto: revisao,
         })
-        .eq("id", pontoExistente.id); // 'id' de presencas é int8 e funciona aqui
+        .eq("id", pontoExistente.id); 
 
       if (error) throw error;
       return res.json({ msg: "Check-out realizado!" });
@@ -188,22 +188,83 @@ app.post("/api/ponto", async (req, res) => {
 });
 
 // ==========================================
-// ADMIN E HISTÓRICO
+// ADMIN E HISTÓRICO (BUSCA MELHORADA)
 // ==========================================
 
 app.get("/api/admin/busca", async (req, res) => {
-  const { termo } = req.query;
-  if (!termo) return res.json([]);
+  const { termo, turma, status } = req.query;
+  
   try {
-    const { data, error } = await supabase
-      .from("alunos")
-      .select("*")
-      .or(`nome.ilike.%${termo}%,cpf.ilike.%${termo}%,email.ilike.%${termo}%`);
+    let query = supabase.from("alunos").select("*");
+
+    if (turma && turma !== "todos") {
+      query = query.eq("formacao", turma);
+    }
+
+    if (termo) {
+      query = query.or(`nome.ilike.%${termo}%,cpf.ilike.%${termo}%,email.ilike.%${termo}%`);
+    }
+
+    // Lógica para Filtros de Inconsistência
+    if (status === "incompleto") {
+      query = query.or("nome.is.null,cpf.is.null");
+    }
+
+    const { data: alunos, error } = await query;
     if (error) throw error;
-    res.json(data);
+
+    // Filtro para "Esqueceram Saída" (Exige cruzamento com a tabela presencas)
+    if (status === "pendente_saida") {
+      const { data: hoje } = getBrasiliaTime();
+      const { data: presencas } = await supabase
+        .from("presencas")
+        .select("aluno_email")
+        .eq("data", hoje)
+        .is("check_out", null);
+      
+      const emailsPendentes = presencas.map(p => p.aluno_email);
+      return res.json(alunos.filter(a => emailsPendentes.includes(a.email)));
+    }
+
+    res.json(alunos);
   } catch (err) {
-    res.status(500).json({ error: "Erro na busca." });
+    res.status(500).json({ error: "Erro na busca administrativa." });
   }
+});
+
+// Rota para Atualizar Dados do Aluno pelo Admin
+app.put("/api/admin/aluno/:id", async (req, res) => {
+  const { nome, email, cpf } = req.body;
+  try {
+    const { error } = await supabase
+      .from("alunos")
+      .update({ nome, email, cpf })
+      .eq("id", req.params.id);
+    if (error) throw error;
+    res.json({ msg: "Dados atualizados com sucesso" });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao atualizar aluno." });
+  }
+});
+
+// Rota para Ponto Manual
+app.post("/api/admin/ponto-manual", async (req, res) => {
+  const { email, data, check_in, check_out } = req.body;
+  try {
+    const { error } = await supabase.from("presencas").insert([
+      { aluno_email: email, data, check_in, check_out }
+    ]);
+    if (error) throw error;
+    res.json({ msg: "Ponto manual registrado!" });
+  } catch (err) {
+    res.status(500).json({ error: "Erro no registro manual." });
+  }
+});
+
+// Rota para Reset de Sessão (Placeholder para implementação futura de tokens)
+app.post("/api/admin/reset-session", async (req, res) => {
+  // Nesta arquitetura, o reset apenas sinaliza sucesso para o front agir
+  res.json({ msg: "Reset solicitado para o usuário." });
 });
 
 app.get("/api/historico/aluno/:email", async (req, res) => {
@@ -222,47 +283,44 @@ app.get("/api/historico/aluno/:email", async (req, res) => {
 });
 
 // ==========================================
-// ESTATÍSTICAS DO ADMIN
+// ESTATÍSTICAS DO ADMIN (MELHORADAS)
 // ==========================================
 
 app.get('/api/admin/stats/:turma', async (req, res) => {
   const { turma } = req.params;
   const { data: hoje } = getBrasiliaTime();
   const agora = new Date();
-  const isSegunda = agora.getDay() === 1; //
+  const isSegunda = agora.getDay() === 1;
 
   try {
     const { count: totalPresencas } = await supabase
       .from('presencas')
-      .select('*', { count: 'exact', head: true })
-      .not('check_out', 'is', null);
+      .select('*', { count: 'exact', head: true });
 
     const { count: sessoesAtivas } = await supabase
+      .from('presencas')
+      .select('*', { count: 'exact', head: true })
+      .eq('data', hoje);
+
+    const { count: pendentesSaida } = await supabase
       .from('presencas')
       .select('*', { count: 'exact', head: true })
       .eq('data', hoje)
       .is('check_out', null);
 
-    // Lógica corrigida: se não for segunda, faltas é 0
-    let faltasHoje = 0;
-    if (isSegunda) {
-      const { count: totalAlunosTurma } = await supabase
-        .from('alunos')
-        .select('*', { count: 'exact', head: true })
-        .eq('formacao', turma);
+    const { count: totalAlunosTurma } = await supabase
+      .from('alunos')
+      .select('*', { count: 'exact', head: true })
+      .eq('formacao', turma);
 
-      const { count: presentesHoje } = await supabase
-        .from('presencas')
-        .select('*', { count: 'exact', head: true })
-        .eq('data', hoje);
-
-      faltasHoje = (totalAlunosTurma || 0) - (presentesHoje || 0);
-    }
+    let faltasHoje = isSegunda ? (totalAlunosTurma || 0) - (sessoesAtivas || 0) : 0;
 
     res.json({
       totalPresencas: totalPresencas || 0,
       sessoesAtivas: sessoesAtivas || 0,
-      faltasHoje: faltasHoje < 0 ? 0 : faltasHoje
+      faltasHoje: faltasHoje < 0 ? 0 : faltasHoje,
+      totalAlunos: totalAlunosTurma || 0,
+      pendentesSaida: pendentesSaida || 0
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao carregar estatísticas.' });

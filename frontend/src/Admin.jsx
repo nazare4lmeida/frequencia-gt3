@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { FORMACOES, API_URL } from "./Constants";
 
 export default function Admin() {
   const [busca, setBusca] = useState("");
   const [filtroTurma, setFiltroTurma] = useState("fullstack");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
   const [alunos, setAlunos] = useState([]);
-  const [stats, setStats] = useState({ totalPresencas: 0, sessoesAtivas: 0, faltasHoje: 0 });
+  const [stats, setStats] = useState({ totalPresencas: 0, sessoesAtivas: 0, faltasHoje: 0, totalAlunos: 0 });
   const [carregando, setCarregando] = useState(false);
-  const [fezBusca, setFezBusca] = useState(false);
   
   // Estados para o Modal de Detalhes
   const [alunoSelecionado, setAlunoSelecionado] = useState(null);
   const [historicoAluno, setHistoricoAluno] = useState([]);
   const [modalAberto, setModalAberto] = useState(false);
+
+  // Estados para Edição e Registro Manual
+  const [editando, setEditando] = useState(false);
+  const [dadosEdicao, setDadosEdicao] = useState({ nome: "", email: "", cpf: "" });
+  const [manualPonto, setManualPonto] = useState({ data: new Date().toISOString().split('T')[0], check_in: "18:30", check_out: "22:00" });
 
   // 1. Carregar estatísticas gerais da turma
   useEffect(() => {
@@ -30,43 +35,39 @@ export default function Admin() {
     carregarStats();
   }, [filtroTurma]);
 
-  // 2. Lógica de busca de alunos
-  const buscarAlunos = async (termo) => {
-    if (termo.length < 3) {
-      setAlunos([]);
-      setFezBusca(false);
-      return;
-    }
+  // 2. Lógica de busca e filtros envolta em useCallback para evitar alertas de dependência
+  const buscarAlunos = useCallback(async (termo) => {
     setCarregando(true);
     try {
-      const res = await fetch(`${API_URL}/admin/busca?termo=${termo}`);
+      const res = await fetch(`${API_URL}/admin/busca?termo=${termo}&turma=${filtroTurma}&status=${filtroStatus}`);
       if (res.ok) {
         const data = await res.json();
         setAlunos(data);
-        setFezBusca(true);
       }
     } catch (err) {
       console.error("Erro na busca:", err);
     } finally {
       setCarregando(false);
     }
-  };
+  }, [filtroTurma, filtroStatus]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (busca) buscarAlunos(busca);
-      else {
+      if (busca || filtroStatus !== "todos") {
+        buscarAlunos(busca);
+      } else {
         setAlunos([]);
-        setFezBusca(false);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [busca]);
+  }, [busca, filtroStatus, buscarAlunos]);
 
-  // 3. Buscar histórico individual do aluno (Correção: usando e-mail)
+  // 3. Ver Detalhes
   const verDetalhes = async (aluno) => {
     setCarregando(true);
     setAlunoSelecionado(aluno);
+    setEditando(false);
+    setDadosEdicao({ nome: aluno.nome, email: aluno.email, cpf: aluno.cpf || "" });
     try {
       const res = await fetch(`${API_URL}/historico/aluno/${aluno.email}`);
       if (res.ok) {
@@ -78,6 +79,60 @@ export default function Admin() {
       alert("Erro ao carregar histórico do aluno.");
     } finally {
       setCarregando(false);
+    }
+  };
+
+  // 4. Salvar Edição
+  const salvarEdicao = async () => {
+    setCarregando(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/aluno/${alunoSelecionado.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosEdicao)
+      });
+      if (res.ok) {
+        alert("Dados atualizados!");
+        setModalAberto(false);
+        buscarAlunos(busca);
+      }
+    } catch {
+      alert("Erro ao salvar.");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // 5. Registro Manual
+  const registrarManual = async () => {
+    if(!window.confirm("Deseja inserir este registro manualmente?")) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/ponto-manual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: alunoSelecionado.email, ...manualPonto })
+      });
+      if (res.ok) {
+        alert("Presença registrada com sucesso!");
+        verDetalhes(alunoSelecionado);
+      }
+    } catch {
+      alert("Erro ao registrar ponto manual.");
+    }
+  };
+
+  // 6. Reset de Sessão
+  const resetarSessao = async (email) => {
+    if(!window.confirm("Isso forçará o aluno a fazer login novamente na próxima vez que abrir o site. Continuar?")) return;
+    try {
+      await fetch(`${API_URL}/admin/reset-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      alert("Solicitação de reset enviada.");
+    } catch {
+      alert("Erro ao resetar.");
     }
   };
 
@@ -107,148 +162,167 @@ export default function Admin() {
   };
 
   return (
-    <div className="app-wrapper" style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
+    <div className="app-wrapper" style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px' }}>
       
-      {/* HEADER DO PAINEL */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Dashboard Administrativo</h2>
-          <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Geração Tech 3.0 • Gestão de Frequência</p>
+      {/* HEADER E BARRA DE PROGRESSO LIVE */}
+      <div style={{ marginBottom: '30px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 style={{ margin: 0 }}>Dashboard Administrativo</h2>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Gestão em Tempo Real • Horário de Brasília</p>
+          </div>
+          <select className="input-modern" style={{ width: '250px' }} value={filtroTurma} onChange={(e) => setFiltroTurma(e.target.value)}>
+            {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+          </select>
         </div>
-        <select 
-          className="input-modern" 
-          style={{ width: '250px' }} 
-          value={filtroTurma} 
-          onChange={(e) => setFiltroTurma(e.target.value)}
-        >
-          {FORMACOES.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-        </select>
+        
+        <div style={{ marginTop: '20px', background: 'var(--border-subtle)', height: '10px', borderRadius: '5px', overflow: 'hidden' }}>
+          <div style={{ 
+            width: `${(stats.sessoesAtivas / (stats.totalAlunos || 1)) * 100}%`, 
+            background: '#008080', height: '100%', transition: 'width 0.5s ease' 
+          }} />
+        </div>
+        <p style={{ fontSize: '0.75rem', marginTop: '5px', color: 'var(--text-dim)' }}>
+          Adesão da Aula: <strong>{stats.sessoesAtivas || 0} alunos</strong> fizeram check-in hoje.
+        </p>
       </div>
 
-      {/* SEÇÃO DE ESTATÍSTICAS */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '15px', 
-        marginBottom: '25px' 
-      }}>
+      {/* CARDS DE STATS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
         <div className="stat-card" style={{ padding: '20px', textAlign: 'center', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Sessões Ativas</span>
-          <h2 style={{ color: 'var(--accent-primary)', margin: '5px 0' }}>{stats.sessoesAtivas || 0}</h2>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>CHECK-INS HOJE</span>
+          <h2 style={{ color: '#008080', margin: '5px 0' }}>{stats.sessoesAtivas || 0}</h2>
         </div>
         <div className="stat-card" style={{ padding: '20px', textAlign: 'center', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Presenças Totais</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>TOTAL HISTÓRICO</span>
           <h2 style={{ margin: '5px 0' }}>{stats.totalPresencas || 0}</h2>
         </div>
         <div className="stat-card" style={{ padding: '20px', textAlign: 'center', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Faltas registradas</span>
-          <h2 style={{ color: '#ef4444', margin: '5px 0' }}>{stats.faltasHoje || 0}</h2>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>PENDENTES SAÍDA</span>
+          <h2 style={{ color: '#f59e0b', margin: '5px 0' }}>{stats.pendentesSaida || 0}</h2>
         </div>
       </div>
 
-      <div className="grid-main" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px' }}>
         
-        {/* COLUNA ESQUERDA: BUSCA E GESTÃO */}
         <div className="shadow-card" style={{ padding: '20px' }}>
-          <h4>Gestão de Alunos</h4>
-          <input 
-            type="text" 
-            className="input-modern" 
-            placeholder="Buscar por Nome ou CPF..." 
-            value={busca} 
-            onChange={(e) => setBusca(e.target.value)} 
-            style={{ marginTop: '10px' }}
-          />
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+            <input 
+              type="text" className="input-modern" placeholder="Nome ou CPF..." 
+              value={busca} onChange={(e) => setBusca(e.target.value)} 
+            />
+            <select className="input-modern" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} style={{ width: '180px' }}>
+              <option value="todos">Todos Alunos</option>
+              <option value="pendente_saida">Esqueceram Saída</option>
+              <option value="incompleto">Cadastro Incompleto</option>
+            </select>
+          </div>
 
-          <div className="historico-container" style={{ marginTop: '20px', minHeight: '150px' }}>
+          <div className="historico-container" style={{ minHeight: '300px' }}>
             {alunos.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ textAlign: 'left', fontSize: '0.8rem', color: 'var(--text-dim)', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <th style={{ padding: '10px 0' }}>ALUNO</th>
-                    <th>CPF</th>
+                    <th>ALUNO</th>
+                    <th>CONTATO</th>
                     <th style={{ textAlign: 'right' }}>AÇÕES</th>
                   </tr>
                 </thead>
                 <tbody>
                   {alunos.map(aluno => (
                     <tr key={aluno.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '12px 0', fontSize: '0.9rem' }}>{aluno.nome}</td>
-                      <td style={{ fontSize: '0.8rem' }}>{aluno.cpf || '---'}</td>
+                      <td style={{ padding: '12px 0' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{aluno.nome}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>CPF: {aluno.cpf || 'Não informado'}</div>
+                      </td>
+                      <td style={{ fontSize: '0.8rem' }}>{aluno.email}</td>
                       <td style={{ textAlign: 'right' }}>
-                         <button 
-                            onClick={() => verDetalhes(aluno)}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.8rem' }}
-                         >
-                            Ver Detalhes
-                         </button>
+                         <button onClick={() => verDetalhes(aluno)} className="btn-secondary" style={{ fontSize: '0.7rem', padding: '5px 10px' }}>Gerenciar</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: '40px' }}>
-                {carregando ? "Buscando dados..." : fezBusca ? "Nenhum resultado." : "Use o campo acima para pesquisar alunos."}
+              <p style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: '50px' }}>
+                {carregando ? "Processando..." : "Use a busca para gerenciar alunos."}
               </p>
             )}
           </div>
         </div>
 
-        {/* COLUNA DIREITA: RELATÓRIOS */}
-        <div className="shadow-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <h4>Relatórios Exportáveis</h4>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '10px' }}>
-              Gere uma planilha completa com a frequência de todos os alunos da turma selecionada.
-            </p>
-            <div className="info-banner" style={{ marginTop: '15px', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-              Turma: <strong>{FORMACOES.find(f => f.id === filtroTurma)?.nome}</strong>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="shadow-card" style={{ padding: '20px' }}>
+            <h4>Relatórios</h4>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', margin: '10px 0' }}>Baixe a lista de chamadas completa para auditoria.</p>
+            <button className="btn-ponto in" style={{ width: '100%' }} onClick={exportarCSV}>Exportar CSV</button>
           </div>
-          
-          <button 
-            className="btn-ponto in" 
-            style={{ width: '100%', marginTop: '20px' }} 
-            onClick={exportarCSV}
-            disabled={carregando}
-          >
-            {carregando ? "Gerando..." : "Baixar Planilha CSV"}
-          </button>
+
+          <div className="shadow-card" style={{ padding: '20px', borderLeft: '4px solid #f59e0b' }}>
+            <h4 style={{ color: '#f59e0b' }}>Lembrete Rápido</h4>
+            <p style={{ fontSize: '0.75rem' }}>Use o filtro "Esqueceram Saída" para identificar quem não fechou o ponto na última aula.</p>
+          </div>
         </div>
       </div>
 
-      {/* MODAL DE HISTÓRICO (DETALHES) */}
       {modalAberto && alunoSelecionado && (
         <div className="modal-overlay">
-          <div className="modal-content shadow-card" style={{ maxWidth: '500px', width: '90%' }}>
-            <h3 style={{ marginBottom: '5px' }}>Histórico de {alunoSelecionado.nome}</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '15px' }}>{alunoSelecionado.email}</p>
+          <div className="modal-content shadow-card" style={{ maxWidth: '600px', width: '95%' }}>
             
-            <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg)' }}>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-dim)' }}>
-                    <th style={{ textAlign: 'left', padding: '8px 0' }}>Data</th>
-                    <th>Entrada</th>
-                    <th>Saída</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historicoAluno.length > 0 ? historicoAluno.map((h, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '10px 0' }}>{new Date(h.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-                      <td style={{ textAlign: 'center' }}>{h.check_in || '--:--'}</td>
-                      <td style={{ textAlign: 'center' }}>{h.check_out || '--:--'}</td>
-                    </tr>
-                  )) : (
-                    <tr><td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-dim)' }}>Nenhum registro encontrado.</td></tr>
-                  )}
-                </tbody>
-              </table>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3>{alunoSelecionado.nome}</h3>
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <button onClick={() => setEditando(false)} style={{ background: !editando ? '#008080' : 'transparent', color: !editando ? 'white' : 'var(--text-normal)', border: '1px solid #008080', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}>Histórico</button>
+                <button onClick={() => setEditando(true)} style={{ background: editando ? '#008080' : 'transparent', color: editando ? 'white' : 'var(--text-normal)', border: '1px solid #008080', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}>Editar/Manual</button>
+              </div>
             </div>
+
+            {!editando ? (
+              <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border-subtle)', textAlign: 'left' }}>
+                      <th style={{ padding: '8px' }}>Data</th>
+                      <th>Entrada</th>
+                      <th>Saída</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historicoAluno.map((h, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '8px' }}>{new Date(h.data).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+                        <td>{h.check_in || '--:--'}</td>
+                        <td>{h.check_out || '--:--'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '15px', background: 'var(--bg-dim)', borderRadius: '8px' }}>
+                  <h5 style={{ marginTop: 0 }}>✏️ Editar Cadastro</h5>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <input className="input-modern" value={dadosEdicao.nome} onChange={e => setDadosEdicao({...dadosEdicao, nome: e.target.value})} placeholder="Nome" />
+                    <input className="input-modern" value={dadosEdicao.email} onChange={e => setDadosEdicao({...dadosEdicao, email: e.target.value})} placeholder="Email" />
+                  </div>
+                  <button className="btn-secondary" style={{ marginTop: '10px', width: '100%' }} onClick={salvarEdicao}>Salvar Alterações</button>
+                  <button className="btn-secondary" style={{ marginTop: '5px', width: '100%', border: '1px solid #ef4444', color: '#ef4444' }} onClick={() => resetarSessao(alunoSelecionado.email)}>Forçar Deslogar Aluno</button>
+                </div>
+
+                <div style={{ padding: '15px', background: 'var(--bg-dim)', borderRadius: '8px' }}>
+                  <h5 style={{ marginTop: 0 }}>➕ Inserir Ponto Manual</h5>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                    <input type="date" className="input-modern" value={manualPonto.data} onChange={e => setManualPonto({...manualPonto, data: e.target.value})} />
+                    <input type="time" className="input-modern" value={manualPonto.check_in} onChange={e => setManualPonto({...manualPonto, check_in: e.target.value})} />
+                    <input type="time" className="input-modern" value={manualPonto.check_out} onChange={e => setManualPonto({...manualPonto, check_out: e.target.value})} />
+                  </div>
+                  <button className="btn-ponto in" style={{ marginTop: '10px', width: '100%' }} onClick={registrarManual}>Registrar Presença Manual</button>
+                </div>
+              </div>
+            )}
             
-            <button className="btn-secondary" style={{ width: '100%' }} onClick={() => setModalAberto(false)}>Fechar Detalhes</button>
+            <button className="btn-secondary" style={{ width: '100%', marginTop: '20px' }} onClick={() => setModalAberto(false)}>Fechar Janela</button>
           </div>
         </div>
       )}

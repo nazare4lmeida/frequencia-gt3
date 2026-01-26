@@ -4,25 +4,26 @@ import { API_URL } from "./Constants";
 export default function Perfil({ user, setUser, onVoltar }) {
   const [nome, setNome] = useState(user.nome || "");
   const [cpf, setCpf] = useState(user.cpf || "");
-  // Alterado para 'lorelei' como padrão inicial, que é mais moderno
   const [avatar, setAvatar] = useState(user.avatar || "lorelei");
   const [loading, setLoading] = useState(false);
 
-  // Novos modelos de avatar mais profissionais e diversos
-  // Usamos user.email no seed para a imagem ser estável e única por aluno
+  // Modelos de avatar baseados no email do usuário
   const modelosAvatar = [
     { id: "lorelei", nome: "Casual", url: `https://api.dicebear.com/7.x/lorelei/svg?seed=${user.email}` },
-    { id: "persona", nome: "Persona", url: `https://api.dicebear.com/7.x/personas/svg?seed=${user.email}` },
+    { id: "personas", nome: "Persona", url: `https://api.dicebear.com/7.x/personas/svg?seed=${user.email}` },
     { id: "open-peeps", nome: "Sketch", url: `https://api.dicebear.com/7.x/open-peeps/svg?seed=${user.email}` },
     { id: "big-smile", nome: "Expressivo", url: `https://api.dicebear.com/7.x/big-smile/svg?seed=${user.email}` },
     { id: "bottts-neutral", nome: "Tech", url: `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${user.email}` }
   ];
 
   const salvarPerfil = async () => {
-    // Validação básica de CPF
-    if (cpf && cpf.replace(/\D/g, "").length < 11) {
-      alert("Por favor, insira um CPF válido.");
-      return;
+    // Validação de CPF apenas se houver algo digitado
+    if (cpf && cpf.trim() !== "") {
+      const cpfLimpo = cpf.replace(/\D/g, "");
+      if (cpfLimpo.length > 0 && cpfLimpo.length < 11) {
+        alert("Por favor, insira um CPF válido ou deixe o campo vazio.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -43,8 +44,10 @@ export default function Perfil({ user, setUser, onVoltar }) {
       if (res.ok) {
         const usuarioAtualizado = { ...user, nome: nome.trim(), cpf: cpf.trim(), avatar };
         
+        // Atualiza o estado global do usuário
         setUser(usuarioAtualizado);
         
+        // Atualiza a sessão local para persistir o nome no Header e Login
         const sessionStr = localStorage.getItem("gt3_session");
         if (sessionStr) {
           const session = JSON.parse(sessionStr);
@@ -95,7 +98,7 @@ export default function Perfil({ user, setUser, onVoltar }) {
           }}>
             <img 
               src={`https://api.dicebear.com/7.x/${avatar}/svg?seed=${user.email}`} 
-              alt="Avatar Selecionado" 
+              alt="Avatar" 
               style={{ width: '100%', height: '100%' }}
             />
           </div>
@@ -132,18 +135,18 @@ export default function Perfil({ user, setUser, onVoltar }) {
 
         <div className="login-form">
           <div style={{ marginBottom: '15px' }}>
-            <label className="stat-label">Nome Completo</label>
+            <label className="stat-label">Nome Completo (Opcional)</label>
             <input 
               type="text" 
               className="input-modern" 
-              placeholder="Seu nome"
+              placeholder="Como quer ser chamado(a)?"
               value={nome} 
               onChange={(e) => setNome(e.target.value)} 
             />
           </div>
 
           <div style={{ marginBottom: '15px' }}>
-            <label className="stat-label">CPF</label>
+            <label className="stat-label">CPF (Opcional)</label>
             <input 
               type="text" 
               className="input-modern" 
@@ -162,17 +165,16 @@ export default function Perfil({ user, setUser, onVoltar }) {
                 disabled 
                 style={{ opacity: 0.6, cursor: 'not-allowed', backgroundColor: 'rgba(57, 52, 54, 0.88)' }} 
             />
-            <small style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>O e-mail não pode ser alterado.</small>
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>
             <button 
               className="btn-ponto in" 
               onClick={salvarPerfil} 
-              disabled={loading || !nome} 
+              disabled={loading} // BOTÃO AGORA SEMPRE ATIVO
               style={{ flex: 2 }}
             >
-              {loading ? "Processando..." : "Salvar Alterações"}
+              {loading ? "Salvando..." : "Salvar Alterações"}
             </button>
             <button className="btn-secondary" onClick={onVoltar} style={{ flex: 1 }}>
               Voltar

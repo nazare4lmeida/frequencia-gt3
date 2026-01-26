@@ -153,58 +153,43 @@ app.post("/api/ponto", async (req, res) => {
   const { aluno_id, nota, revisao } = req.body; 
   const { data: hoje, hora: agora } = getBrasiliaTime();
   
-  // Garantimos a verificação do dia da semana em Brasília
-  const agoraBrasilia = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-  const diaSemana = agoraBrasilia.getDay(); // 1 é Segunda-feira
+  if (!aluno_id) return res.status(400).json({ error: "Identificação do aluno ausente." });
 
-  // Trava de segurança: apenas segundas-feiras
-  if (diaSemana !== 1) {
-    return res.status(403).json({ 
-      error: "O sistema de presença só abre às segundas-feiras. Hoje é " + 
-             agoraBrasilia.toLocaleDateString('pt-BR', { weekday: 'long' }) + "." 
-    });
+  const agoraBrasilia = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  if (agoraBrasilia.getDay() !== 1) {
+    return res.status(403).json({ error: "O sistema só abre às segundas-feiras." });
   }
 
   try {
-    const { data: pontoExistente } = await supabase
+    const { data: pontoExistente, error: fetchError } = await supabase
       .from("presencas")
       .select("*")
-      .eq("aluno_email", aluno_id)
+      .eq("aluno_email", aluno_id.trim().toLowerCase())
       .eq("data", hoje)
-      .maybeSingle(); // maybeSingle evita erro de "PGRST116" caso não encontre nada
+      .maybeSingle(); // Correção: evita erro 500 se não encontrar nada
+
+    if (fetchError) throw fetchError;
 
     if (!pontoExistente) {
-      // Check-in
-      const { error } = await supabase.from("presencas").insert([
-        {
-          aluno_email: aluno_id,
-          data: hoje,
-          check_in: agora,
-        },
+      const { error: insError } = await supabase.from("presencas").insert([
+        { aluno_email: aluno_id.trim().toLowerCase(), data: hoje, check_in: agora }
       ]);
-      if (error) throw error;
-      return res.json({ msg: "Check-in realizado com sucesso!" });
+      if (insError) throw insError;
+      return res.json({ msg: "Check-in realizado!" });
     } else {
-      // Check-out
-      if (pontoExistente.check_out) {
-        return res.status(400).json({ error: "Você já concluiu sua presença de hoje." });
-      }
+      if (pontoExistente.check_out) return res.status(400).json({ error: "Ponto já concluído." });
 
-      const { error } = await supabase
+      const { error: updError } = await supabase
         .from("presencas")
-        .update({
-          check_out: agora,
-          feedback_nota: nota,
-          feedback_texto: revisao,
-        })
+        .update({ check_out: agora, feedback_nota: nota || null, feedback_texto: revisao || "" })
         .eq("id", pontoExistente.id); 
 
-      if (error) throw error;
-      return res.json({ msg: "Check-out realizado com sucesso!" });
+      if (updError) throw updError;
+      return res.json({ msg: "Check-out realizado!" });
     }
   } catch (err) {
-    console.error("ERRO PONTO:", err);
-    res.status(500).json({ error: "Erro interno ao registrar frequência." });
+    console.error(err);
+    res.status(500).json({ error: "Erro interno ao processar frequência." });
   }
 });
 

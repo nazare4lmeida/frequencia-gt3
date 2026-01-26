@@ -201,7 +201,7 @@ export default function App() {
       // Popup adicional após o Check-in informando sobre o Check-out
       if (!extra.nota) { 
          setTimeout(() => {
-            exibirPopup("📌 Lembrete: O Check-out deve ser feito entre 22:00 e 22:30.", "aviso");
+            exibirPopup("📌 Lembrete: O Check-out deve ser feito hoje entre 22:00 e 22:30.", "aviso");
          }, 1000);
       }
 
@@ -346,6 +346,7 @@ export default function App() {
                   );
                 }
 
+                // CHECK-IN: Botão sempre ativo para evitar "encerrado" precoce, mas valida via popup
                 if (!pontoHoje?.check_in) {
                   return (
                     <button
@@ -354,15 +355,16 @@ export default function App() {
                         if (podeCheckIn) {
                           baterPonto();
                         } else {
-                          exibirPopup("🕒 O Check-in é permitido apenas entre 18h e 20h30.", "aviso");
+                          exibirPopup("🕒 Atenção: O Check-in só é permitido entre 18:00 e 20:30.", "aviso");
                         }
                       }}
-                      disabled={!podeCheckIn}
                     >
-                      {podeCheckIn ? "CHECK-IN" : "O Check-in encerrou às (20:30)"}
+                      CHECK-IN
                     </button>
                   );
                 }
+
+                // CHECK-OUT: Botão sempre ativo após check-in, validando horário via popup
                 if (!pontoHoje?.check_out) {
                   return (
                     <button
@@ -371,18 +373,11 @@ export default function App() {
                         if (podeCheckOut) {
                           setFeedback({ ...feedback, modal: true });
                         } else {
-                          exibirPopup("🕒 O Check-out é permitido apenas entre 22h e 22h30.", "aviso");
+                          exibirPopup("🕒 Atenção: O Check-out só é permitido entre 22:00 e 22:30.", "aviso");
                         }
                       }}
-                      disabled={!podeCheckOut}
-                      style={{
-                        opacity: podeCheckOut ? 1 : 0.5,
-                        cursor: podeCheckOut ? "pointer" : "not-allowed",
-                      }}
                     >
-                      {podeCheckOut
-                        ? "CHECK-OUT"
-                        : "Aguarde até o prazo mínimo pra Check-Out (22:00)"}
+                      CHECK-OUT
                     </button>
                   );
                 }

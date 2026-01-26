@@ -120,12 +120,16 @@ export default function App() {
 
   const carregarHistorico = useCallback(async () => {
     // Pegamos o email direto do estado ou do localStorage para garantir
-    const emailParaBusca = user?.email || JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
-    
+    const emailParaBusca =
+      user?.email ||
+      JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
+
     if (!emailParaBusca || user?.role === "admin") return;
 
     try {
-      const res = await fetch(`${API_URL}/historico/aluno/${emailParaBusca.trim().toLowerCase()}`);
+      const res = await fetch(
+        `${API_URL}/historico/aluno/${emailParaBusca.trim().toLowerCase()}`,
+      );
       if (res.ok) {
         const data = await res.json();
         setHistorico(data); // Isso fará o botão mudar de CHECK-IN para CHECK-OUT ou CONCLUÍDO
@@ -249,8 +253,21 @@ export default function App() {
     );
   }
 
-  const hoje = new Date().toLocaleDateString("en-CA");
-  const pontoHoje = historico.find((h) => h.data.split("T")[0] === hoje);
+  const hoje = new Date()
+    .toLocaleString("en-US", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    .split(",")[0]
+    .split("/")
+    .reverse()
+    .join("-");
+  const pontoHoje = historico.find((h) => {
+    const dataRegistro = h.data.includes("T") ? h.data.split("T")[0] : h.data;
+    return dataRegistro === hoje;
+  });
   const totalPresencas = historico.length;
   const totalFaltas = 0;
 

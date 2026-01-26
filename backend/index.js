@@ -276,15 +276,24 @@ app.post("/api/admin/reset-session", async (req, res) => {
 
 app.get("/api/historico/aluno/:email", async (req, res) => {
   try {
-    const emailFormatado = req.params.email.trim().toLowerCase(); // Limpeza total
+    const emailFormatado = req.params.email.trim().toLowerCase();
+    
     const { data, error } = await supabase
       .from("presencas")
       .select("*")
-      .eq("aluno_email", emailFormatado) // Deve bater com o nome da coluna no banco
+      .eq("aluno_email", emailFormatado)
       .order("data", { ascending: false });
 
     if (error) throw error;
-    res.json(data || []);
+
+    // Ajuste para garantir que o Front-end entenda a data corretamente
+    const historicoFormatado = data.map(item => ({
+      ...item,
+      // Forçamos a data a ser apenas YYYY-MM-DD para o Front conseguir comparar
+      data: item.data.includes('T') ? item.data.split('T')[0] : item.data
+    }));
+
+    res.json(historicoFormatado);
   } catch (err) {
     console.error("ERRO HISTORICO:", err);
     res.status(500).json({ error: "Erro ao carregar histórico." });

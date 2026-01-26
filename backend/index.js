@@ -146,16 +146,21 @@ app.put("/api/aluno/perfil", async (req, res) => {
 // ==========================================
 // REGISTRAR PONTO (CORREÇÃO DO ERRO 500)
 // ==========================================
+// ==========================================
+// REGISTRAR PONTO (CORREÇÃO DE SINTAXE DE DATA/HORA)
+// ==========================================
 app.post("/api/ponto", async (req, res) => {
   const { aluno_id, nota, revisao } = req.body; 
   const { data: hoje, hora: agora } = getBrasiliaTime();
   
+  // Criamos o formato TIMESTAMP completo: "YYYY-MM-DD HH:MM:SS"
+  const timestampCompleto = `${hoje} ${agora}`;
+
   if (!aluno_id) return res.status(400).json({ error: "E-mail do aluno não enviado." });
 
   const agoraBrasilia = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
   const diaSemana = agoraBrasilia.getDay(); 
 
-  // Validação do dia (1 = Segunda-feira)
   if (diaSemana !== 1) {
     return res.status(403).json({ 
       error: "O sistema só abre às segundas. Hoje é " + agoraBrasilia.toLocaleDateString('pt-BR', { weekday: 'long' }) 
@@ -165,18 +170,6 @@ app.post("/api/ponto", async (req, res) => {
   try {
     const emailBusca = aluno_id.trim().toLowerCase();
 
-    // 1. Verificar se o aluno existe antes de bater o ponto
-    const { data: alunoExiste } = await supabase
-      .from("alunos")
-      .select("email")
-      .eq("email", emailBusca)
-      .maybeSingle();
-
-    if (!alunoExiste) {
-      return res.status(404).json({ error: "Aluno não encontrado na base de dados." });
-    }
-
-    // 2. Buscar ponto do dia
     const { data: pontoExistente, error: fetchError } = await supabase
       .from("presencas")
       .select("*")
@@ -187,26 +180,26 @@ app.post("/api/ponto", async (req, res) => {
     if (fetchError) throw fetchError;
 
     if (!pontoExistente) {
-      // Realizar Check-in
+      // CHECK-IN: Enviando o timestamp completo para evitar o erro de sintaxe
       const { error: insError } = await supabase.from("presencas").insert([
         {
           aluno_email: emailBusca,
           data: hoje,
-          check_in: agora,
+          check_in: timestampCompleto, // <-- Alterado aqui
         },
       ]);
       if (insError) throw insError;
       return res.json({ msg: "Check-in realizado com sucesso!" });
     } else {
-      // Realizar Check-out
       if (pontoExistente.check_out) {
         return res.status(400).json({ error: "Você já concluiu sua presença de hoje." });
       }
 
+      // CHECK-OUT: Enviando o timestamp completo
       const { error: updError } = await supabase
         .from("presencas")
         .update({
-          check_out: agora,
+          check_out: timestampCompleto, // <-- Alterado aqui
           feedback_nota: nota || null,
           feedback_texto: revisao || "",
         })
@@ -217,7 +210,6 @@ app.post("/api/ponto", async (req, res) => {
     }
   } catch (err) {
     console.error("ERRO CRÍTICO NO PONTO:", err);
-    // Retornamos o erro real no log para você ver no terminal do VS Code/Vercel
     res.status(500).json({ error: "Erro no banco de dados: " + (err.message || "Tente novamente.") });
   }
 });

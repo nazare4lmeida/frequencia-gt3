@@ -3,7 +3,7 @@ import { FORMACOES, API_URL } from "./Constants";
 
 export default function Admin() {
   const [busca, setBusca] = useState("");
-  const [filtroTurma, setFiltroTurma] = useState("fullstack");
+  const [filtroTurma, setFiltroTurma] = useState("todos");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [alunos, setAlunos] = useState([]);
   const [stats, setStats] = useState({
@@ -72,14 +72,15 @@ export default function Admin() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (busca || filtroStatus !== "todos") {
+      // Busca se houver texto OU se os filtros forem alterados
+      if (busca || filtroStatus !== "todos" || filtroTurma !== "todos") {
         buscarAlunos(busca);
       } else {
         setAlunos([]);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [busca, filtroStatus, buscarAlunos]);
+  }, [busca, filtroStatus, filtroTurma, buscarAlunos]);
 
   // 3. Ver Detalhes
   const verDetalhes = async (aluno) => {
@@ -258,7 +259,7 @@ export default function Admin() {
           <div>
             <h2 style={{ margin: 0 }}>Dashboard Administrativo</h2>
             <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-              Gestão em Tempo Real • Horário de Brasília
+              Gestão em Tempo Real • Horário de Brasília • Geração Tech 3.0
             </p>
           </div>
           <select
@@ -267,6 +268,8 @@ export default function Admin() {
             value={filtroTurma}
             onChange={(e) => setFiltroTurma(e.target.value)}
           >
+            {/* Opção primária e padrão selecionada automaticamente */}
+            <option value="todos">Todas as Turmas</option>
             {FORMACOES.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.nome}

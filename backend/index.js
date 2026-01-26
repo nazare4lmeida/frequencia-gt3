@@ -207,7 +207,8 @@ app.get("/api/admin/busca", async (req, res) => {
   
   try {
     let query = supabase.from("alunos").select("*");
-
+    
+    // Se turma for "todos", ele ignora o filtro e traz de todas
     if (turma && turma !== "todos") {
       query = query.eq("formacao", turma);
     }
@@ -224,7 +225,7 @@ app.get("/api/admin/busca", async (req, res) => {
     const { data: alunos, error } = await query;
     if (error) throw error;
 
-    // Filtro para "Esqueceram Saída" (Exige cruzamento com a tabela presencas)
+    // Filtro para "Esqueceram Saída"
     if (status === "pendente_saida") {
       const { data: hoje } = getBrasiliaTime();
       const { data: presencas } = await supabase
@@ -239,6 +240,7 @@ app.get("/api/admin/busca", async (req, res) => {
 
     res.json(alunos);
   } catch (err) {
+    console.error("ERRO BUSCA ADMIN:", err);
     res.status(500).json({ error: "Erro na busca administrativa." });
   }
 });
@@ -267,26 +269,17 @@ app.delete("/api/admin/aluno/:email", async (req, res) => {
   const emailOriginal = decodeURIComponent(req.params.email);
 
   try {
-    // Primeiro, removemos as presenças vinculadas a esse e-mail para evitar erro de chave estrangeira
-    const { error: errorPresencas } = await supabase
-      .from("presencas")
-      .delete()
-      .eq("aluno_email", emailOriginal);
-
-    if (errorPresencas) throw errorPresencas;
+    // Primeiro, removemos as presenças vinculadas a esse e-mail
+    await supabase.from("presencas").delete().eq("aluno_email", emailOriginal);
 
     // Depois, removemos o cadastro do aluno
-    const { error: errorAluno } = await supabase
-      .from("alunos")
-      .delete()
-      .eq("email", emailOriginal);
+    const { error } = await supabase.from("alunos").delete().eq("email", emailOriginal);
 
-    if (errorAluno) throw errorAluno;
-
+    if (error) throw error;
     res.json({ msg: "Cadastro excluído com sucesso!" });
   } catch (err) {
     console.error("ERRO AO EXCLUIR:", err);
-    res.status(500).json({ error: "Erro ao excluir cadastro do banco de dados." });
+    res.status(500).json({ error: "Erro ao excluir cadastro." });
   }
 });
 
@@ -304,9 +297,8 @@ app.post("/api/admin/ponto-manual", async (req, res) => {
   }
 });
 
-// Rota para Reset de Sessão (Placeholder para implementação futura de tokens)
+// Rota para Reset de Sessão
 app.post("/api/admin/reset-session", async (req, res) => {
-  // Nesta arquitetura, o reset apenas sinaliza sucesso para o front agir
   res.json({ msg: "Reset solicitado para o usuário." });
 });
 
@@ -351,10 +343,13 @@ app.get('/api/admin/stats/:turma', async (req, res) => {
       .eq('data', hoje)
       .is('check_out', null);
 
-    const { count: totalAlunosTurma } = await supabase
-      .from('alunos')
-      .select('*', { count: 'exact', head: true })
-      .eq('formacao', turma);
+    let queryAlunos = supabase.from('alunos').select('*', { count: 'exact', head: true });
+    
+    if (turma !== "todos") {
+      queryAlunos = queryAlunos.eq('formacao', turma);
+    }
+    
+    const { count: totalAlunosTurma } = await queryAlunos;
 
     let faltasHoje = isSegunda ? (totalAlunosTurma || 0) - (sessoesAtivas || 0) : 0;
 

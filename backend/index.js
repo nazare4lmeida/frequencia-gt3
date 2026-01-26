@@ -166,29 +166,41 @@ app.post("/api/ponto", async (req, res) => {
       .select("*")
       .eq("aluno_email", aluno_id.trim().toLowerCase())
       .eq("data", hoje)
-      .maybeSingle(); // Correção: evita erro 500 se não encontrar nada
+      .maybeSingle(); 
 
     if (fetchError) throw fetchError;
 
     if (!pontoExistente) {
+      // Check-in
       const { error: insError } = await supabase.from("presencas").insert([
-        { aluno_email: aluno_id.trim().toLowerCase(), data: hoje, check_in: agora }
+        {
+          aluno_email: aluno_id.trim().toLowerCase(),
+          data: hoje,
+          check_in: agora,
+        },
       ]);
       if (insError) throw insError;
-      return res.json({ msg: "Check-in realizado!" });
+      return res.json({ msg: "Check-in realizado com sucesso!" });
     } else {
-      if (pontoExistente.check_out) return res.status(400).json({ error: "Ponto já concluído." });
+      // Check-out
+      if (pontoExistente.check_out) {
+        return res.status(400).json({ error: "Ponto já concluído hoje." });
+      }
 
       const { error: updError } = await supabase
         .from("presencas")
-        .update({ check_out: agora, feedback_nota: nota || null, feedback_texto: revisao || "" })
+        .update({
+          check_out: agora,
+          feedback_nota: nota || null,
+          feedback_texto: revisao || "",
+        })
         .eq("id", pontoExistente.id); 
 
       if (updError) throw updError;
-      return res.json({ msg: "Check-out realizado!" });
+      return res.json({ msg: "Check-out realizado com sucesso!" });
     }
   } catch (err) {
-    console.error(err);
+    console.error("ERRO PONTO:", err);
     res.status(500).json({ error: "Erro interno ao processar frequência." });
   }
 });
@@ -203,7 +215,6 @@ app.get("/api/admin/busca", async (req, res) => {
   try {
     let query = supabase.from("alunos").select("*");
     
-    // Se turma for "todos", ele ignora o filtro e traz de todas
     if (turma && turma !== "todos") {
       query = query.eq("formacao", turma);
     }
@@ -212,7 +223,6 @@ app.get("/api/admin/busca", async (req, res) => {
       query = query.or(`nome.ilike.%${termo}%,cpf.ilike.%${termo}%,email.ilike.%${termo}%`);
     }
 
-    // Lógica para Filtros de Inconsistência
     if (status === "incompleto") {
       query = query.or("nome.is.null,cpf.is.null");
     }
@@ -220,7 +230,6 @@ app.get("/api/admin/busca", async (req, res) => {
     const { data: alunos, error } = await query;
     if (error) throw error;
 
-    // Filtro para "Esqueceram Saída"
     if (status === "pendente_saida") {
       const { data: hoje } = getBrasiliaTime();
       const { data: presencas } = await supabase
@@ -264,10 +273,7 @@ app.delete("/api/admin/aluno/:email", async (req, res) => {
   const emailOriginal = decodeURIComponent(req.params.email);
 
   try {
-    // Primeiro, removemos as presenças vinculadas a esse e-mail
     await supabase.from("presencas").delete().eq("aluno_email", emailOriginal);
-
-    // Depois, removemos o cadastro do aluno
     const { error } = await supabase.from("alunos").delete().eq("email", emailOriginal);
 
     if (error) throw error;
@@ -313,7 +319,7 @@ app.get("/api/historico/aluno/:email", async (req, res) => {
 });
 
 // ==========================================
-// ESTATÍSTICAS DO ADMIN (MELHORADAS)
+// ESTATÍSTICAS DO ADMIN
 // ==========================================
 
 app.get('/api/admin/stats/:turma', async (req, res) => {
@@ -365,22 +371,13 @@ app.get('/api/admin/stats/:turma', async (req, res) => {
 // ==========================================
 app.get("/api/admin/relatorio/:turma", async (req, res) => {
   const { turma } = req.params;
-
   try {
-    let query = supabase
-      .from("alunos")
-      .select("nome, email, cpf, presencas(data)");
-
-    // Se o parâmetro NÃO for "todos", filtramos pela turma específica
+    let query = supabase.from("alunos").select("nome, email, cpf, presencas(data)");
     if (turma !== "todos") {
       query = query.eq("formacao", turma);
     }
-
     const { data, error } = await query;
-
     if (error) throw error;
-
-    // Retorna a lista de alunos com suas respectivas presenças
     res.json(data);
   } catch (err) {
     console.error("ERRO RELATÓRIO:", err);

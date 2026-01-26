@@ -55,7 +55,7 @@ app.post("/api/login", async (req, res) => {
     let aluno;
 
     if (!alunos || alunos.length === 0) {
-      // Cadastro automático se não existir
+      // Cadastro automático se não existir (Primeiro Acesso)
       const { data: novoAluno, error: insertError } = await supabase
         .from("alunos")
         .insert([
@@ -70,14 +70,25 @@ app.post("/api/login", async (req, res) => {
       if (insertError) throw insertError;
       aluno = novoAluno[0];
     } else {
+      // Aluno já existe no sistema
       aluno = alunos[0];
-      // Validação de data de nascimento
+
+      // BLOQUEIO DE DUPLICIDADE: Validação de data de nascimento
       const dataFormatadaDb = aluno.data_nascimento.toString().split("T")[0];
       if (dataFormatadaDb !== dataNascimento) {
-        return res.status(401).json({ error: "Data de nascimento incorreta." });
+        return res.status(401).json({ 
+          error: "Este e-mail já está cadastrado com outra data de nascimento. Caso tenha digitado errado, procure a coordenação." 
+        });
       }
 
-      // Atualiza formação se necessário usando email como chave
+      // BLOQUEIO DE ALTERAÇÃO DE TURMA: Se já tem formação, não permite trocar no login
+      if (aluno.formacao && formacao && aluno.formacao !== formacao) {
+        return res.status(403).json({ 
+          error: `Você já está registrado na formação ${aluno.formacao}. Não é permitido acesso duplicado em outra turma.` 
+        });
+      }
+
+      // Se o aluno existia mas por algum motivo não tinha formação salva ainda, atualiza uma única vez
       if (formacao && !aluno.formacao) {
         await supabase
           .from("alunos")
@@ -248,6 +259,34 @@ app.put("/api/admin/aluno/:email", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erro ao atualizar aluno no banco de dados." });
+  }
+});
+
+// Rota para Excluir Aluno pelo Admin
+app.delete("/api/admin/aluno/:email", async (req, res) => {
+  const emailOriginal = decodeURIComponent(req.params.email);
+
+  try {
+    // Primeiro, removemos as presenças vinculadas a esse e-mail para evitar erro de chave estrangeira
+    const { error: errorPresencas } = await supabase
+      .from("presencas")
+      .delete()
+      .eq("aluno_email", emailOriginal);
+
+    if (errorPresencas) throw errorPresencas;
+
+    // Depois, removemos o cadastro do aluno
+    const { error: errorAluno } = await supabase
+      .from("alunos")
+      .delete()
+      .eq("email", emailOriginal);
+
+    if (errorAluno) throw errorAluno;
+
+    res.json({ msg: "Cadastro excluído com sucesso!" });
+  } catch (err) {
+    console.error("ERRO AO EXCLUIR:", err);
+    res.status(500).json({ error: "Erro ao excluir cadastro do banco de dados." });
   }
 });
 

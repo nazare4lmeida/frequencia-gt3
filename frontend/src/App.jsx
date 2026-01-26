@@ -154,14 +154,33 @@ export default function App() {
           formacao: form.formacao,
         }),
       });
+      
       const data = await res.json();
 
       if (!res.ok) {
-        exibirPopup(data.error || "Erro no login", "erro");
+        exibirPopup(data.error || "Erro no login, tente novamente com as credenciais corretas.", "erro");
         return;
       }
 
+      // --- CONTROLE DE CONFLITO DE SESSÃO LOCAL ---
+      const sessaoExistente = localStorage.getItem("gt3_session");
+      if (sessaoExistente) {
+        try {
+          const { userData } = JSON.parse(sessaoExistente);
+          if (userData && userData.email !== data.email) {
+            // Se um novo aluno tentar logar sem o anterior ter saído, limpa o rastro do anterior
+            localStorage.removeItem("gt3_session");
+          }
+        } catch {
+          // Se o dado no localStorage estiver corrompido, apenas removemos
+          localStorage.removeItem("gt3_session");
+        }
+      }
+      // --------------------------------------------
+
       setUser(data);
+      
+      // Atualiza o "Lembrar-me" com os dados validados pelo banco
       localStorage.setItem(
         "gt3_remember",
         JSON.stringify({
@@ -172,11 +191,14 @@ export default function App() {
         }),
       );
 
+      // Define a sessão ativa (expira em 12h conforme sua lógica no useState)
       localStorage.setItem(
         "gt3_session",
         JSON.stringify({ userData: data, timestamp: Date.now() }),
       );
-    } catch {
+
+    } catch (err) {
+      console.error("Erro no login front:", err);
       exibirPopup("Erro de conexão com o servidor", "erro");
     }
   };

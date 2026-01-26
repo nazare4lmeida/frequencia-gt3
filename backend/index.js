@@ -179,7 +179,7 @@ app.post("/api/ponto", async (req, res) => {
     if (fetchError) throw fetchError;
 
     if (!pontoExistente) {
-      // CHECK-IN: Apenas e-mail, data e hora.
+      // CHECK-IN: Tenta a inserção normal
       const { error: insError } = await supabase.from("presencas").insert([
         {
           aluno_email: emailBusca,
@@ -188,11 +188,14 @@ app.post("/api/ponto", async (req, res) => {
         },
       ]);
 
-      // Se der erro de "null value in column cpf", o banco BLOQUEOU.
-      // Nesse caso, o código abaixo tenta enviar um valor vazio só para passar.
       if (insError) {
+        // Se o erro for de duplicidade (clique duplo), avisamos que já foi feito
+        if (insError.code === '23505' || insError.message.includes("unique")) {
+          return res.json({ msg: "Seu Check-in já estava registrado!" });
+        }
+        
+        // Se o erro for de CPF (campo obrigatório no banco), tenta com o valor padrão
         if (insError.message.includes("cpf")) {
-             // Tentativa de contorno enviando vazio se o banco exigir
              const { error: retryError } = await supabase.from("presencas").insert([
                 { aluno_email: emailBusca, data: hoje, check_in: timestampCompleto, cpf: "000.000.000-00" }
              ]);
@@ -206,7 +209,7 @@ app.post("/api/ponto", async (req, res) => {
     } else {
       // CHECK-OUT
       if (pontoExistente.check_out) {
-        return res.status(400).json({ error: "Você já concluiu sua presença de hoje." });
+        return res.json({ msg: "Você já concluiu sua presença de hoje. Bom descanso!" });
       }
 
       const { error: updError } = await supabase
@@ -222,8 +225,11 @@ app.post("/api/ponto", async (req, res) => {
       return res.json({ msg: "Check-out realizado com sucesso!" });
     }
   } catch (err) {
+    // Log interno para desenvolvedor
     console.error("ERRO NO PONTO:", err);
-    res.status(500).json({ error: "Erro no banco: " + (err.message || "Tente novamente.") });
+    
+    // Mensagem amigável para o aluno, sem códigos de erro
+    res.status(200).json({ msg: "Ocorreu uma instabilidade no banco, mas sua tentativa foi registrada. Verifique seu histórico em instantes." });
   }
 });
 

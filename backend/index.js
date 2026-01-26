@@ -234,13 +234,13 @@ app.get("/api/admin/busca", async (req, res) => {
 
 // Rota para Atualizar Dados do Aluno pelo Admin usando EMAIL
 app.put("/api/admin/aluno/:email", async (req, res) => {
-  const { nome, email, cpf } = req.body;
-  const emailOriginal = decodeURIComponent(req.params.email); // O e-mail que já estava no banco
+  const { nome, email, cpf, data_nascimento } = req.body;
+  const emailOriginal = decodeURIComponent(req.params.email); 
 
   try {
     const { error } = await supabase
       .from("alunos")
-      .update({ nome, email, cpf })
+      .update({ nome, email, cpf, data_nascimento })
       .eq("email", emailOriginal);
       
     if (error) throw error;

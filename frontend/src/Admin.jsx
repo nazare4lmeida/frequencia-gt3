@@ -16,7 +16,7 @@ export default function Admin() {
 
   // Estados para Edição e Registro Manual
   const [editando, setEditando] = useState(false);
-  const [dadosEdicao, setDadosEdicao] = useState({ nome: "", email: "", cpf: "" });
+  const [dadosEdicao, setDadosEdicao] = useState({ nome: "", email: "", cpf: "", data_nascimento: "" });
   const [manualPonto, setManualPonto] = useState({ data: new Date().toISOString().split('T')[0], check_in: "18:30", check_out: "22:00" });
 
   // 1. Carregar estatísticas gerais da turma
@@ -67,7 +67,7 @@ export default function Admin() {
     setCarregando(true);
     setAlunoSelecionado(aluno);
     setEditando(false);
-    setDadosEdicao({ nome: aluno.nome, email: aluno.email, cpf: aluno.cpf || "" });
+    setDadosEdicao({ nome: aluno.nome, email: aluno.email, cpf: aluno.cpf || "", data_nascimento: aluno.data_nascimento || ""});
     try {
       const res = await fetch(`${API_URL}/historico/aluno/${aluno.email}`);
       if (res.ok) {
@@ -306,10 +306,12 @@ export default function Admin() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ padding: '15px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
-                  <h5 style={{ marginTop: 0 }}>✏️ Editar Cadastro</h5>
+                  <h5 style={{ marginTop: 0 }}>Editar Cadastro</h5>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <input className="input-modern" value={dadosEdicao.nome} onChange={e => setDadosEdicao({...dadosEdicao, nome: e.target.value})} placeholder="Nome" />
                     <input className="input-modern" value={dadosEdicao.email} onChange={e => setDadosEdicao({...dadosEdicao, email: e.target.value})} placeholder="Email" />
+                    <input className="input-modern" value={dadosEdicao.cpf} onChange={e => setDadosEdicao({...dadosEdicao, cpf: e.target.value})} placeholder="CPF" />
+                    <input type="date" className="input-modern" value={dadosEdicao.data_nascimento} onChange={e => setDadosEdicao({...dadosEdicao, data_nascimento: e.target.value})} placeholder="Data de Nascimento" />
                   </div>
                   <button className="btn-secondary" style={{ marginTop: '10px', width: '100%' }} onClick={salvarEdicao}>Salvar Alterações</button>
                   <button className="btn-secondary" style={{ marginTop: '5px', width: '100%', border: '1px solid #ef4444', color: '#ef4444' }} onClick={() => resetarSessao(alunoSelecionado.email)}>Forçar Deslogar Aluno</button>

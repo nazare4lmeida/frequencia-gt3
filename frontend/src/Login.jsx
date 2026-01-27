@@ -74,13 +74,12 @@ export default function Login({
               onChange={handleChange("email")}
             />
             <input
-              type="text" // Começa como texto
-              placeholder="Data de nascimento"
+              type="text"
+              placeholder="Data de nascimento (AAAA-MM-DD)"
               className="input-modern"
               value={form.dataNasc}
               onChange={handleChange("dataNasc")}
-              onFocus={(e) => (e.target.type = "date")} // Vira data ao clicar
-              onBlur={(e) => !e.target.value && (e.target.type = "text")} // Volta a ser texto se estiver vazio
+              maxLength="10" // Limita para o formato YYYY-MM-DD
             />
 
             <select

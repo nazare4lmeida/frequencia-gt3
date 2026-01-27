@@ -24,7 +24,6 @@ export default function Admin() {
   const [dadosEdicao, setDadosEdicao] = useState({
     nome: "",
     email: "",
-    cpf: "",
     data_nascimento: "",
   });
   const [manualPonto, setManualPonto] = useState({
@@ -90,7 +89,6 @@ export default function Admin() {
     setDadosEdicao({
       nome: aluno.nome,
       email: aluno.email,
-      cpf: aluno.cpf || "",
       data_nascimento: aluno.data_nascimento || "",
     });
     try {
@@ -222,11 +220,11 @@ export default function Admin() {
         alert("Não existem dados disponíveis para exportar.");
         return;
       }
-      const cabecalho = "Nome,Email,CPF,Presencas\n";
+      const cabecalho = "Nome,Email,Presencas\n";
       const csvContent = data
         .map(
           (aluno) =>
-            `"${aluno.nome}","${aluno.email}","${aluno.cpf || "N/A"}",${aluno.presencas?.length || 0}`,
+            `"${aluno.nome}","${aluno.email}",${aluno.presencas?.length || 0}`,
         )
         .join("\n");
       const blob = new Blob(["\ufeff" + cabecalho + csvContent], {
@@ -379,7 +377,7 @@ export default function Admin() {
             <input
               type="text"
               className="input-modern"
-              placeholder="Nome ou CPF..."
+              placeholder="Nome..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
@@ -428,7 +426,7 @@ export default function Admin() {
                             color: "var(--text-dim)",
                           }}
                         >
-                          CPF: {aluno.cpf || "Não informado"}
+                          {aluno.formacao_nome}
                         </div>
                       </td>
                       <td style={{ fontSize: "0.8rem" }}>{aluno.email}</td>
@@ -617,14 +615,6 @@ export default function Admin() {
                         })
                       }
                       placeholder="Email"
-                    />
-                    <input
-                      className="input-modern"
-                      value={dadosEdicao.cpf}
-                      onChange={(e) =>
-                        setDadosEdicao({ ...dadosEdicao, cpf: e.target.value })
-                      }
-                      placeholder="CPF"
                     />
                     <input
                       type="date"

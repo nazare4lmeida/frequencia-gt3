@@ -40,14 +40,14 @@ body.dark {
 /* Ajuste para Modo Claro - Clean & Professional */
 body:not(.dark) {
   /* Fundo da página levemente acinzentado para destacar os cards brancos */
-  --bg-deep: #f8fafc;        
-  --card-bg: #ffffff;        
-  --text-main: #1e293b;      
-  --text-dim: #64748b;       
-  --border-subtle: #e2e8f0;  
-  
+  --bg-deep: #f8fafc;
+  --card-bg: #ffffff;
+  --text-main: #1e293b;
+  --text-dim: #64748b;
+  --border-subtle: #e2e8f0;
+
   /* Cor de destaque para botões e links no modo claro (Teal/Verde Água) */
-  --accent-primary: #0d9488; 
+  --accent-primary: #0d9488;
 }
 
 /* Header com efeito de vidro (Glassmorphism) */
@@ -64,12 +64,12 @@ body:not(.dark) .shadow-card,
 body:not(.dark) .stat-card {
   background: var(--card-bg);
   border: 1px solid var(--border-subtle);
-  
+
   /* Sombra de duas camadas: uma para contorno e outra para profundidade */
-  box-shadow: 
-    0 1px 3px 0 rgba(0, 0, 0, 0.1), 
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  
+
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -83,7 +83,7 @@ body:not(.dark) .stat-card:hover {
 }
 
 /* Ajuste opcional: se você tiver inputs ou badges */
-body:not(.dark) input, 
+body:not(.dark) input,
 body:not(.dark) select {
   background-color: #ffffff;
   border: 1px solid #d1d5db;
@@ -188,6 +188,34 @@ body:not(.dark) select {
   line-height: 1.5;
 }
 
+/* Estilo base dos círculos numéricos */
+.rating-group .btn-rating {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: bold;
+}
+
+/* Efeito ao passar o mouse */
+.rating-group .btn-rating:hover {
+  border-color: #008080;
+  color: #008080;
+  transform: scale(1.1);
+}
+
+/* Estilo quando o número está selecionado */
+.rating-group .btn-rating.active {
+  background-color: #008080;
+  border-color: #008080;
+  color: white;
+  box-shadow: 0 0 10px rgba(0, 128, 128, 0.4);
+}
+
 /* ================================================= */
 /* 3. HEADER (DISCRETO E FIXO NO TOPO)              */
 /* ================================================= */
@@ -224,6 +252,15 @@ body:not(.dark) select {
   font-size: 0.85rem;
   font-weight: 600;
   line-height: 1.2;
+  padding-top: 2px;
+  align-items: center;
+  border-left: 2px solid var(--teal-primary);
+  margin-left: 10px;
+  padding-left: 10px;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+  width: max-content;
+  height: auto;
 }
 
 .brand-text span {
@@ -232,6 +269,9 @@ body:not(.dark) select {
   color: var(--teal-primary);
   text-transform: uppercase;
   font-weight: 800;
+  letter-spacing: 1px;
+  padding: 0 4px;
+  
 }
 
 /* Badge de Aluno/Admin sutil */
@@ -525,6 +565,23 @@ body:not(.dark) select {
   max-width: 400px;
   width: 90%;
   border: 1px solid var(--border-subtle);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: auto;
+  width: auto;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .input-notes {
@@ -634,20 +691,20 @@ li:last-child {
   display: inline-block;
   background: rgba(28, 58, 55, 0.897);
   color: rgb(43, 134, 124);
-  
+
   /* DIMINUIR LARGURA: Reduzi o 16px para 8px */
-  padding: 4px 8px; 
-  
+  padding: 4px 8px;
+
   /* DISTÂNCIA DA VÍRGULA: Adiciona espaço antes do balão */
-  margin-left: 12px; 
-  
+  margin-left: 12px;
+
   border-radius: 50px;
   font-weight: 600;
   font-size: 0.9rem;
   border: 2px solid rgba(10, 55, 50, 0.379);
-  
+
   /* Alinhamento vertical caso o balão esteja subindo/descendo */
-  vertical-align: middle; 
+  vertical-align: middle;
 }
 
 /* Alinhamento para o formulário de Perfil */
@@ -762,8 +819,14 @@ input:disabled {
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Seções Internas do Modal de Gestão */

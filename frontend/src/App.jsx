@@ -106,18 +106,11 @@ export default function App() {
   }, [alarmeAtivo]);
 
   const validarHorarioPonto = () => {
-    const agora = new Date();
-    const brasilia = new Date(
-      agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
-    );
-    const diaSemana = brasilia.getDay();
-    const hora = brasilia.getHours();
-    const minutos = brasilia.getMinutes();
-    const horaDecimal = hora + minutos / 60;
-    const isSegunda = diaSemana === 1;
-    const podeCheckIn = isSegunda && horaDecimal >= 18 && horaDecimal <= 20.5;
-    const podeCheckOut = isSegunda && horaDecimal >= 22 && horaDecimal <= 22.5;
-    return { isSegunda, podeCheckIn, podeCheckOut };
+    return {
+      isSegunda: true, // Forçado para teste
+      podeCheckIn: true, // Forçado para teste
+      podeCheckOut: true, // Forçado para teste
+    };
   };
 
   const handleLogin = async () => {
@@ -534,12 +527,14 @@ export default function App() {
                 gap: "10px",
                 margin: "15px 0",
                 justifyContent: "center",
+                alignItems: "center",
+                color: "var(--text-dim)",
               }}
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   key={n}
-                  className={feedback.nota === n ? "active" : ""}
+                  className={`btn-rating ${feedback.nota === n ? "active" : ""}`}
                   onClick={() => setFeedback({ ...feedback, nota: n })}
                 >
                   {n}

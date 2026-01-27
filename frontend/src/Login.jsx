@@ -74,10 +74,13 @@ export default function Login({
               onChange={handleChange("email")}
             />
             <input
-              type="date"
+              type="text" // Começa como texto
+              placeholder="Data de nascimento"
               className="input-modern"
               value={form.dataNasc}
               onChange={handleChange("dataNasc")}
+              onFocus={(e) => (e.target.type = "date")} // Vira data ao clicar
+              onBlur={(e) => !e.target.value && (e.target.type = "text")} // Volta a ser texto se estiver vazio
             />
 
             <select

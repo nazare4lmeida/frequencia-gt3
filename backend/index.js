@@ -78,21 +78,20 @@ app.post("/api/login", async (req, res) => {
     } else {
       aluno = alunos[0];
 
-      // Dentro do seu app.post("/api/login")
       if (aluno.data_nascimento) {
-        // Converte o objeto de data do banco para string ISO e pega apenas os primeiros 10 caracteres (YYYY-MM-DD)
-        const dataFormatadaDb = new Date(aluno.data_nascimento)
+        // Converte o que vem do banco (Date) para string ISO e pega só o YYYY-MM-DD
+        const dataBancoSrt = new Date(aluno.data_nascimento)
           .toISOString()
           .split("T")[0];
 
-        // Se o que o aluno digitou (dataNascimento) for diferente da string pura do banco
-        if (dataFormatadaDb !== dataNascimento) {
+        // dataNascimento aqui é o que veio do seu fetch (já convertido no front para YYYY-MM-DD)
+        if (dataBancoSrt !== dataNascimento) {
           console.log(
-            `Erro: Esperado ${dataFormatadaDb}, Recebido ${dataNascimento}`,
+            `Divergência: Banco [${dataBancoSrt}] vs Input [${dataNascimento}]`,
           );
-          return res.status(401).json({
-            error: "Data de nascimento incorreta. Verifique os dados.",
-          });
+          return res
+            .status(401)
+            .json({ error: "Data de nascimento incorreta." });
         }
       }
 

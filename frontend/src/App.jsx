@@ -114,40 +114,58 @@ export default function App() {
   };
 
   const handleLogin = async () => {
-    try {
-      const res = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          dataNascimento: form.dataNasc,
-          formacao: form.formacao,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        exibirPopup(data.error || "Erro no login.", "erro");
-        return;
-      }
-      localStorage.removeItem("gt3_session");
-      setUser(data);
-      localStorage.setItem(
-        "gt3_remember",
-        JSON.stringify({
-          email: data.email,
-          dataNasc: data.data_nascimento,
-          nome: data.nome || "",
-          formacao: data.formacao,
-        }),
-      );
-      localStorage.setItem(
-        "gt3_session",
-        JSON.stringify({ userData: data, timestamp: Date.now() }),
-      );
-    } catch {
-      exibirPopup("Erro de conexão.", "erro");
+  try {
+    // 1. CONVERSÃO DE FORMATO: DD/MM/AAAA -> AAAA-MM-DD
+    const partes = form.dataNasc.split("/");
+    if (partes.length !== 3 || form.dataNasc.length < 10) {
+      exibirPopup("Digite a data completa: DD/MM/AAAA", "erro");
+      return;
     }
-  };
+    // Remonta para o padrão que o campo DATE do Supabase exige
+    const dataParaEnvio = `${partes[2]}-${partes[1]}-${partes[0]}`;
+
+    const res = await fetch(`${API_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: form.email,
+        dataNascimento: dataParaEnvio, // Enviamos a data convertida aqui
+        formacao: form.formacao,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      exibirPopup(data.error || "Erro no login.", "erro");
+      return;
+    }
+
+    localStorage.removeItem("gt3_session");
+    setUser(data);
+
+    // 2. PERSISTÊNCIA: Salvamos para o "Bem-vindo de volta"
+    localStorage.setItem(
+      "gt3_remember",
+      JSON.stringify({
+        email: data.email,
+        // Aqui guardamos no formato BR para o input de texto não bugar ao voltar
+        dataNasc: form.dataNasc, 
+        nome: data.nome || "",
+        formacao: data.formacao,
+      }),
+    );
+
+    localStorage.setItem(
+      "gt3_session",
+      JSON.stringify({ userData: data, timestamp: Date.now() }),
+    );
+
+  } catch (err) {
+    console.error("Erro no fetch de login:", err);
+    exibirPopup("Erro de conexão.", "erro");
+  }
+};
   const carregarHistorico = useCallback(async () => {
     const emailParaBusca =
       user?.email ||

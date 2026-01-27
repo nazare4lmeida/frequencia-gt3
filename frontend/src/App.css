@@ -269,9 +269,7 @@ body:not(.dark) select {
   color: var(--teal-primary);
   text-transform: uppercase;
   font-weight: 800;
-  letter-spacing: 1px;
-  padding: 0 4px;
-  
+  letter-spacing: 1px;  
 }
 
 /* Badge de Aluno/Admin sutil */

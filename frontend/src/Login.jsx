@@ -75,11 +75,20 @@ export default function Login({
             />
             <input
               type="text"
-              placeholder="Data de nascimento (AAAA-MM-DD)"
+              placeholder="Data de nascimento (DD/MM/AAAA)"
               className="input-modern"
               value={form.dataNasc}
-              onChange={handleChange("dataNasc")}
-              maxLength="10" // Limita para o formato YYYY-MM-DD
+              onChange={(e) => {
+                let v = e.target.value.replace(/\D/g, ""); // Remove tudo que não é número
+                if (v.length > 8) v = v.slice(0, 8); // Limita a 8 dígitos
+
+                // Aplica a máscara DD/MM/AAAA
+                if (v.length >= 5)
+                  v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
+                else if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+
+                setForm({ ...form, dataNasc: v });
+              }}
             />
 
             <select

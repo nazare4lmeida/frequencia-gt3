@@ -1,7 +1,7 @@
 const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
 const cors = require("cors");
-require('dotenv').config(); 
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
@@ -78,12 +78,20 @@ app.post("/api/login", async (req, res) => {
     } else {
       aluno = alunos[0];
 
+      // Dentro do seu app.post("/api/login")
       if (aluno.data_nascimento) {
-        const dataFormatadaDb = aluno.data_nascimento.toString().split("T")[0];
+        // Converte o objeto de data do banco para string ISO e pega apenas os primeiros 10 caracteres (YYYY-MM-DD)
+        const dataFormatadaDb = new Date(aluno.data_nascimento)
+          .toISOString()
+          .split("T")[0];
+
+        // Se o que o aluno digitou (dataNascimento) for diferente da string pura do banco
         if (dataFormatadaDb !== dataNascimento) {
+          console.log(
+            `Erro: Esperado ${dataFormatadaDb}, Recebido ${dataNascimento}`,
+          );
           return res.status(401).json({
-            error:
-              "Este e-mail já está cadastrado com outra data de nascimento. Caso tenha digitado errado, procure a coordenação.",
+            error: "Data de nascimento incorreta. Verifique os dados.",
           });
         }
       }

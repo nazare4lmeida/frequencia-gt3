@@ -77,11 +77,11 @@ app.post("/api/login", async (req, res) => {
   const emailFormatado = email.trim().toLowerCase();
 
   // LOGIN ADMIN
-  if (emailFormatado === "admin@gt3.com" && dataNascimento === "2026-01-01") {
+  if (emailFormatado === process.env.ADMIN_EMAIL && dataNascimento === process.env.ADMIN_PASS) {
     const token = jwt.sign(
       { email: emailFormatado, role: "admin" },
       JWT_SECRET,
-      { expiresIn: "12h" }
+      { expiresIn: "720h" }
     );
     return res.json({
       nome: "Administrador",
@@ -147,7 +147,7 @@ app.post("/api/login", async (req, res) => {
     const token = jwt.sign(
       { id: aluno.id, email: aluno.email, role: "aluno" },
       JWT_SECRET,
-      { expiresIn: "12h" }
+      { expiresIn: "720h" }
     );
 
     res.json({ ...aluno, role: "aluno", token });

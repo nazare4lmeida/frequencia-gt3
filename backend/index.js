@@ -30,21 +30,27 @@ const verificarToken = (req, res, next) => {
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(403).json({ error: "Acesso negado. Faça login novamente." });
+    return res
+      .status(403)
+      .json({ error: "Acesso negado. Faça login novamente." });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.usuarioLogado = decoded; 
+    req.usuarioLogado = decoded;
     next();
   } catch (err) {
-    return res.status(401).json({ error: "Sua sessão expirou. Entre novamente." });
+    return res
+      .status(401)
+      .json({ error: "Sua sessão expirou. Entre novamente." });
   }
 };
 
 const verificarAdmin = (req, res, next) => {
   if (req.usuarioLogado.role !== "admin") {
-    return res.status(403).json({ error: "Acesso restrito a administradores." });
+    return res
+      .status(403)
+      .json({ error: "Acesso restrito a administradores." });
   }
   next();
 };
@@ -77,17 +83,20 @@ app.post("/api/login", async (req, res) => {
   const emailFormatado = email.trim().toLowerCase();
 
   // LOGIN ADMIN
-  if (emailFormatado === process.env.ADMIN_EMAIL && dataNascimento === process.env.ADMIN_PASS) {
+  if (
+    emailFormatado === process.env.ADMIN_EMAIL &&
+    dataNascimento === process.env.ADMIN_PASS
+  ) {
     const token = jwt.sign(
       { email: emailFormatado, role: "admin" },
       JWT_SECRET,
-      { expiresIn: "720h" }
+      { expiresIn: "720h" },
     );
     return res.json({
       nome: "Administrador",
       role: "admin",
       email: emailFormatado,
-      token // Envia o token para o front
+      token, // Envia o token para o front
     });
   }
 
@@ -124,7 +133,9 @@ app.post("/api/login", async (req, res) => {
           .split("T")[0];
 
         if (dataBancoSrt !== dataNascimento) {
-          return res.status(401).json({ error: "Data de nascimento incorreta." });
+          return res
+            .status(401)
+            .json({ error: "Data de nascimento incorreta." });
         }
       }
 
@@ -147,7 +158,7 @@ app.post("/api/login", async (req, res) => {
     const token = jwt.sign(
       { id: aluno.id, email: aluno.email, role: "aluno" },
       JWT_SECRET,
-      { expiresIn: "720h" }
+      { expiresIn: "720h" },
     );
 
     res.json({ ...aluno, role: "aluno", token });
@@ -257,82 +268,110 @@ app.post("/api/ponto", verificarToken, async (req, res) => {
 // ADMIN (TODAS PROTEGIDAS POR TOKEN + ADMIN)
 // ==========================================
 
-app.get("/api/admin/busca", verificarToken, verificarAdmin, async (req, res) => {
-  const { termo, turma, status } = req.query;
-  try {
-    let query = supabase.from("alunos").select("*");
-    if (turma && turma !== "todos") query = query.eq("formacao", turma);
-    if (termo)
-      query = query.or(
-        `nome.ilike.%${termo}%,cpf.ilike.%${termo}%,email.ilike.%${termo}%`,
-      );
-    if (status === "incompleto") query = query.or("nome.is.null,cpf.is.null");
+app.get(
+  "/api/admin/busca",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { termo, turma, status } = req.query;
+    try {
+      let query = supabase.from("alunos").select("*");
+      if (turma && turma !== "todos") query = query.eq("formacao", turma);
+      if (termo)
+        query = query.or(`nome.ilike.%${termo}%,email.ilike.%${termo}%`);
+      if (status === "incompleto") query = query.or("nome.is.null");
 
-    const { data: alunos, error } = await query;
-    if (error) throw error;
+      const { data: alunos, error } = await query;
+      if (error) throw error;
 
-    if (status === "pendente_saida") {
-      const { data: hoje } = getBrasiliaTime();
-      const { data: presencas } = await supabase
-        .from("presencas")
-        .select("aluno_email")
-        .eq("data", hoje)
-        .is("check_out", null);
-      const emailsPendentes = presencas.map((p) => p.aluno_email);
-      return res.json(alunos.filter((a) => emailsPendentes.includes(a.email)));
+      if (status === "pendente_saida") {
+        const { data: hoje } = getBrasiliaTime();
+        const { data: presencas } = await supabase
+          .from("presencas")
+          .select("aluno_email")
+          .eq("data", hoje)
+          .is("check_out", null);
+        const emailsPendentes = presencas.map((p) => p.aluno_email);
+        return res.json(
+          alunos.filter((a) => emailsPendentes.includes(a.email)),
+        );
+      }
+      res.json(alunos);
+    } catch (err) {
+      res.status(500).json({ error: "Erro na busca administrativa." });
     }
-    res.json(alunos);
-  } catch (err) {
-    res.status(500).json({ error: "Erro na busca administrativa." });
-  }
-});
+  },
+);
 
-app.put("/api/admin/aluno/:email", verificarToken, verificarAdmin, async (req, res) => {
-  const { nome, email, cpf, data_nascimento } = req.body;
-  const emailOriginal = decodeURIComponent(req.params.email);
-  try {
-    const { error } = await supabase
-      .from("alunos")
-      .update({ nome, email, cpf, data_nascimento })
-      .eq("email", emailOriginal);
-    if (error) throw error;
-    res.json({ msg: "Dados atualizados com sucesso" });
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao atualizar aluno." });
-  }
-});
+app.put(
+  "/api/admin/aluno/:email",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { nome, email, cpf, data_nascimento } = req.body;
+    const emailOriginal = decodeURIComponent(req.params.email);
+    try {
+      const { error } = await supabase
+        .from("alunos")
+        .update({ nome, email, cpf, data_nascimento })
+        .eq("email", emailOriginal);
+      if (error) throw error;
+      res.json({ msg: "Dados atualizados com sucesso" });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao atualizar aluno." });
+    }
+  },
+);
 
-app.delete("/api/admin/aluno/:email", verificarToken, verificarAdmin, async (req, res) => {
-  const emailOriginal = decodeURIComponent(req.params.email);
-  try {
-    await supabase.from("presencas").delete().eq("aluno_email", emailOriginal);
-    const { error } = await supabase
-      .from("alunos")
-      .delete()
-      .eq("email", emailOriginal);
-    if (error) throw error;
-    res.json({ msg: "Cadastro excluído com sucesso!" });
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao excluir cadastro." });
-  }
-});
+app.delete(
+  "/api/admin/aluno/:email",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const emailOriginal = decodeURIComponent(req.params.email);
+    try {
+      await supabase
+        .from("presencas")
+        .delete()
+        .eq("aluno_email", emailOriginal);
+      const { error } = await supabase
+        .from("alunos")
+        .delete()
+        .eq("email", emailOriginal);
+      if (error) throw error;
+      res.json({ msg: "Cadastro excluído com sucesso!" });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao excluir cadastro." });
+    }
+  },
+);
 
-app.post("/api/admin/ponto-manual", verificarToken, verificarAdmin, async (req, res) => {
-  const { email, data, check_in, check_out } = req.body;
-  try {
-    const { error } = await supabase
-      .from("presencas")
-      .insert([{ aluno_email: email, data, check_in, check_out }]);
-    if (error) throw error;
-    res.json({ msg: "Ponto manual registrado!" });
-  } catch (err) {
-    res.status(500).json({ error: "Erro no registro manual." });
-  }
-});
+app.post(
+  "/api/admin/ponto-manual",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { email, data, check_in, check_out } = req.body;
+    try {
+      const { error } = await supabase
+        .from("presencas")
+        .insert([{ aluno_email: email, data, check_in, check_out }]);
+      if (error) throw error;
+      res.json({ msg: "Ponto manual registrado!" });
+    } catch (err) {
+      res.status(500).json({ error: "Erro no registro manual." });
+    }
+  },
+);
 
-app.post("/api/admin/reset-session", verificarToken, verificarAdmin, async (req, res) => {
-  res.json({ msg: "Reset solicitado." });
-});
+app.post(
+  "/api/admin/reset-session",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    res.json({ msg: "Reset solicitado." });
+  },
+);
 
 app.get("/api/historico/aluno/:email", verificarToken, async (req, res) => {
   try {
@@ -357,70 +396,80 @@ app.get("/api/historico/aluno/:email", verificarToken, async (req, res) => {
   }
 });
 
-app.get("/api/admin/stats/:turma", verificarToken, verificarAdmin, async (req, res) => {
-  const { turma } = req.params;
-  const { data: hoje } = getBrasiliaTime();
-  const agora = new Date();
-  const isSegunda = agora.getDay() === 1;
+app.get(
+  "/api/admin/stats/:turma",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { turma } = req.params;
+    const { data: hoje } = getBrasiliaTime();
+    const agora = new Date();
+    const isSegunda = agora.getDay() === 1;
 
-  try {
-    const { count: totalPresencas } = await supabase
-      .from("presencas")
-      .select("*", { count: "exact", head: true });
-    const { count: sessoesAtivas } = await supabase
-      .from("presencas")
-      .select("*", { count: "exact", head: true })
-      .eq("data", hoje);
-    const { count: pendentesSaida } = await supabase
-      .from("presencas")
-      .select("*", { count: "exact", head: true })
-      .eq("data", hoje)
-      .is("check_out", null);
+    try {
+      const { count: totalPresencas } = await supabase
+        .from("presencas")
+        .select("*", { count: "exact", head: true });
+      const { count: sessoesAtivas } = await supabase
+        .from("presencas")
+        .select("*", { count: "exact", head: true })
+        .eq("data", hoje);
+      const { count: pendentesSaida } = await supabase
+        .from("presencas")
+        .select("*", { count: "exact", head: true })
+        .eq("data", hoje)
+        .is("check_out", null);
 
-    let queryAlunos = supabase
-      .from("alunos")
-      .select("*", { count: "exact", head: true });
-    if (turma !== "todos") queryAlunos = queryAlunos.eq("formacao", turma);
-    const { count: totalAlunosTurma } = await queryAlunos;
+      let queryAlunos = supabase
+        .from("alunos")
+        .select("*", { count: "exact", head: true });
+      if (turma !== "todos") queryAlunos = queryAlunos.eq("formacao", turma);
+      const { count: totalAlunosTurma } = await queryAlunos;
 
-    let faltasHoje = isSegunda
-      ? (totalAlunosTurma || 0) - (sessoesAtivas || 0)
-      : 0;
+      let faltasHoje = isSegunda
+        ? (totalAlunosTurma || 0) - (sessoesAtivas || 0)
+        : 0;
 
-    res.json({
-      totalPresencas: totalPresencas || 0,
-      sessoesAtivas: sessoesAtivas || 0,
-      faltasHoje: faltasHoje < 0 ? 0 : faltasHoje,
-      totalAlunos: totalAlunosTurma || 0,
-      pendentesSaida: pendentesSaida || 0,
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao carregar estatísticas." });
-  }
-});
-
-app.get("/api/admin/relatorio/:turma", verificarToken, verificarAdmin, async (req, res) => {
-  const { turma } = req.params;
-  try {
-    let query = supabase
-      .from("alunos")
-      .select(
-        "nome, email, cpf, formacao, presencas(data, check_in, check_out)",
-      );
-
-    if (turma !== "todos") {
-      query = query.eq("formacao", turma);
+      res.json({
+        totalPresencas: totalPresencas || 0,
+        sessoesAtivas: sessoesAtivas || 0,
+        faltasHoje: faltasHoje < 0 ? 0 : faltasHoje,
+        totalAlunos: totalAlunosTurma || 0,
+        pendentesSaida: pendentesSaida || 0,
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao carregar estatísticas." });
     }
+  },
+);
 
-    const { data, error } = await query;
-    if (error) throw error;
+app.get(
+  "/api/admin/relatorio/:turma",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { turma } = req.params;
+    try {
+      let query = supabase
+        .from("alunos")
+        .select(
+          "nome, email, cpf, formacao, presencas(data, check_in, check_out)",
+        );
 
-    res.json(data);
-  } catch (err) {
-    console.error("ERRO RELATORIO:", err);
-    res.status(500).json({ error: "Erro ao gerar relatório." });
-  }
-});
+      if (turma !== "todos") {
+        query = query.eq("formacao", turma);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      res.json(data);
+    } catch (err) {
+      console.error("ERRO RELATORIO:", err);
+      res.status(500).json({ error: "Erro ao gerar relatório." });
+    }
+  },
+);
 
 app.get("/api/health", (_, res) => res.json({ status: "online" }));
 

@@ -349,15 +349,24 @@ app.delete(
 app.post("/api/admin/ponto-manual", verificarToken, verificarAdmin, async (req, res) => {
   const { email, data, check_in, check_out, nota, revisao } = req.body;
   
+  // Função para transformar "18:30" em "2026-01-29T18:30:00"
+  const montarTimestamp = (valorHora) => {
+    if (!valorHora) return null;
+    // Se já estiver no formato completo (ISO), retorna ele mesmo
+    if (valorHora.includes("T")) return valorHora;
+    // Caso contrário, combina a data com a hora
+    return `${data}T${valorHora}:00`;
+  };
+
   try {
     const { data: novoPonto, error } = await supabase
       .from("presencas")
       .insert([
         { 
-          aluno_email: email, 
+          aluno_email: email.trim().toLowerCase(), 
           data: data, 
-          check_in: check_in, 
-          check_out: check_out,
+          check_in: montarTimestamp(check_in), 
+          check_out: montarTimestamp(check_out),
           feedback_nota: nota || null,
           feedback_texto: revisao || ""
         }
@@ -372,7 +381,7 @@ app.post("/api/admin/ponto-manual", verificarToken, verificarAdmin, async (req, 
     res.json({ msg: "Ponto manual registrado!", ponto: novoPonto[0] });
   } catch (err) {
     console.error("ERRO SERVIDOR:", err);
-    res.status(500).json({ error: "Erro interno no registro manual." });
+    res.status(500).json({ error: "Erro interno no servidor." });
   }
 });
 

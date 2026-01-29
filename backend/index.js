@@ -346,23 +346,35 @@ app.delete(
   },
 );
 
-app.post(
-  "/api/admin/ponto-manual",
-  verificarToken,
-  verificarAdmin,
-  async (req, res) => {
-    const { email, data, check_in, check_out } = req.body;
-    try {
-      const { error } = await supabase
-        .from("presencas")
-        .insert([{ aluno_email: email, data, check_in, check_out }]);
-      if (error) throw error;
-      res.json({ msg: "Ponto manual registrado!" });
-    } catch (err) {
-      res.status(500).json({ error: "Erro no registro manual." });
+app.post("/api/admin/ponto-manual", verificarToken, verificarAdmin, async (req, res) => {
+  const { email, data, check_in, check_out, nota, revisao } = req.body;
+  
+  try {
+    const { data: novoPonto, error } = await supabase
+      .from("presencas")
+      .insert([
+        { 
+          aluno_email: email, 
+          data: data, 
+          check_in: check_in, 
+          check_out: check_out,
+          feedback_nota: nota || null,
+          feedback_texto: revisao || ""
+        }
+      ])
+      .select();
+
+    if (error) {
+      console.error("ERRO SUPABASE:", error);
+      return res.status(400).json({ error: error.message });
     }
-  },
-);
+
+    res.json({ msg: "Ponto manual registrado!", ponto: novoPonto[0] });
+  } catch (err) {
+    console.error("ERRO SERVIDOR:", err);
+    res.status(500).json({ error: "Erro interno no registro manual." });
+  }
+});
 
 app.post(
   "/api/admin/reset-session",

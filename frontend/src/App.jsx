@@ -4,6 +4,7 @@ import { API_URL } from "./Constants";
 import Login from "./Login";
 import Admin from "./Admin";
 import Perfil from "./Perfil";
+import { fetchComToken } from "./Api";
 
 // Funções para o Calendário de Segundas-feiras
 const getProximasSegundas = (formacao) => {
@@ -114,66 +115,79 @@ export default function App() {
   };
 
   const handleLogin = async () => {
-  try {
-    // 1. CONVERSÃO DE FORMATO: DD/MM/AAAA -> AAAA-MM-DD
-    const partes = form.dataNasc.split("/");
-    if (partes.length !== 3 || form.dataNasc.length < 10) {
-      exibirPopup("Digite a data completa: DD/MM/AAAA", "erro");
-      return;
+    try {
+      // 1. CONVERSÃO DE FORMATO: DD/MM/AAAA -> AAAA-MM-DD
+      const partes = form.dataNasc.split("/");
+      if (partes.length !== 3 || form.dataNasc.length < 10) {
+        exibirPopup("Digite a data completa: DD/MM/AAAA", "erro");
+        return;
+      }
+      // Remonta para o padrão que o campo DATE do Supabase exige
+      const dataParaEnvio = `${partes[2]}-${partes[1]}-${partes[0]}`;
+
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          dataNascimento: dataParaEnvio, // Enviamos a data convertida aqui
+          formacao: form.formacao,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        exibirPopup(data.error || "Erro no login.", "erro");
+        return;
+      }
+
+      localStorage.removeItem("gt3_session");
+      setUser(data);
+
+      // 2. PERSISTÊNCIA: Salvamos para o "Bem-vindo de volta"
+      localStorage.setItem(
+        "gt3_remember",
+        JSON.stringify({
+          email: data.email,
+          // Aqui guardamos no formato BR para o input de texto não bugar ao voltar
+          dataNasc: form.dataNasc,
+          nome: data.nome || "",
+          formacao: data.formacao,
+        }),
+      );
+
+      localStorage.setItem(
+        "gt3_session",
+        JSON.stringify({ userData: data, timestamp: Date.now() }),
+      );
+    } catch (err) {
+      console.error("Erro no fetch de login:", err);
+      exibirPopup("Erro de conexão.", "erro");
     }
-    // Remonta para o padrão que o campo DATE do Supabase exige
-    const dataParaEnvio = `${partes[2]}-${partes[1]}-${partes[0]}`;
-
-    const res = await fetch(`${API_URL}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: form.email,
-        dataNascimento: dataParaEnvio, // Enviamos a data convertida aqui
-        formacao: form.formacao,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      exibirPopup(data.error || "Erro no login.", "erro");
-      return;
-    }
-
-    localStorage.removeItem("gt3_session");
-    setUser(data);
-
-    // 2. PERSISTÊNCIA: Salvamos para o "Bem-vindo de volta"
-    localStorage.setItem(
-      "gt3_remember",
-      JSON.stringify({
-        email: data.email,
-        // Aqui guardamos no formato BR para o input de texto não bugar ao voltar
-        dataNasc: form.dataNasc, 
-        nome: data.nome || "",
-        formacao: data.formacao,
-      }),
-    );
-
-    localStorage.setItem(
-      "gt3_session",
-      JSON.stringify({ userData: data, timestamp: Date.now() }),
-    );
-
-  } catch (err) {
-    console.error("Erro no fetch de login:", err);
-    exibirPopup("Erro de conexão.", "erro");
-  }
-};
+  };
   const carregarHistorico = useCallback(async () => {
     const emailParaBusca =
       user?.email ||
       JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
-    if (!emailParaBusca || user?.role === "admin") return;
+
+    // Pegamos o token do estado user ou do localStorage
+    const token =
+      user?.token ||
+      JSON.parse(localStorage.getItem("gt3_session"))?.userData?.token;
+
+    if (!emailParaBusca || user?.role === "admin" || !token) return;
+
     try {
       const res = await fetch(
         `${API_URL}/historico/aluno/${emailParaBusca.trim().toLowerCase()}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // Acréscimo do Token
+          },
+        },
       );
       if (res.ok) {
         const data = await res.json();
@@ -192,18 +206,14 @@ export default function App() {
   }, [user?.email, carregarHistorico]);
 
   const baterPonto = async (extra = {}) => {
-    if (!user || !user.email)
+    if (!user || !user.email || !user.token)
       return exibirPopup("Sessão expirada. Faça login novamente.", "erro");
 
     try {
-      const res = await fetch(`${API_URL}/ponto`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          aluno_id: user.email.trim().toLowerCase(),
-          ...extra,
-        }),
-      });
+      const res = await fetchComToken("/ponto", "POST", {
+  aluno_id: user.email.trim().toLowerCase(),
+  ...extra,
+});
 
       const data = await res.json();
 
@@ -213,7 +223,6 @@ export default function App() {
       }
 
       exibirPopup(data.msg, "sucesso");
-
       // FORÇA O RECONHECIMENTO DA PRESENÇA:
       // Isso busca os dados novos do Supabase e atualiza o estado 'historico'
       await carregarHistorico();
@@ -323,7 +332,7 @@ export default function App() {
       </header>
 
       {view === "admin" && user.role === "admin" ? (
-        <Admin />
+        <Admin user={user} /> // Adicionado user={user}
       ) : view === "perfil" ? (
         <Perfil
           user={user}

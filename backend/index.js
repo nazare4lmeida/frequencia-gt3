@@ -1,25 +1,58 @@
 const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
 const cors = require("cors");
+const jwt = require("jsonwebtoken"); // Adicionado
 require("dotenv").config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Verificação de segurança para as chaves do Supabase
+// Verificação de segurança para as chaves do Supabase e JWT
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
+const JWT_SECRET = process.env.JWT_SECRET; // Adicionado no seu .env
 
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseKey || !JWT_SECRET) {
   console.error(
-    "ERRO: Variáveis de ambiente SUPABASE_URL ou SUPABASE_KEY não configuradas!",
+    "ERRO: Variáveis de ambiente (SUPABASE ou JWT_SECRET) não configuradas!",
   );
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Helper para pegar data e hora de Brasília
+// ==========================================
+// MIDDLEWARES DE SEGURANÇA (NOVO)
+// ==========================================
+
+const verificarToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(403).json({ error: "Acesso negado. Faça login novamente." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.usuarioLogado = decoded; 
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Sua sessão expirou. Entre novamente." });
+  }
+};
+
+const verificarAdmin = (req, res, next) => {
+  if (req.usuarioLogado.role !== "admin") {
+    return res.status(403).json({ error: "Acesso restrito a administradores." });
+  }
+  next();
+};
+
+// ==========================================
+// HELPERS
+// ==========================================
+
 const getBrasiliaTime = () => {
   const agora = new Date();
   const brasilia = new Date(
@@ -43,11 +76,18 @@ app.post("/api/login", async (req, res) => {
 
   const emailFormatado = email.trim().toLowerCase();
 
+  // LOGIN ADMIN
   if (emailFormatado === "admin@gt3.com" && dataNascimento === "2026-01-01") {
+    const token = jwt.sign(
+      { email: emailFormatado, role: "admin" },
+      JWT_SECRET,
+      { expiresIn: "12h" }
+    );
     return res.json({
       nome: "Administrador",
       role: "admin",
       email: emailFormatado,
+      token // Envia o token para o front
     });
   }
 
@@ -79,19 +119,12 @@ app.post("/api/login", async (req, res) => {
       aluno = alunos[0];
 
       if (aluno.data_nascimento) {
-        // Converte o que vem do banco (Date) para string ISO e pega só o YYYY-MM-DD
         const dataBancoSrt = new Date(aluno.data_nascimento)
           .toISOString()
           .split("T")[0];
 
-        // dataNascimento aqui é o que veio do seu fetch (já convertido no front para YYYY-MM-DD)
         if (dataBancoSrt !== dataNascimento) {
-          console.log(
-            `Divergência: Banco [${dataBancoSrt}] vs Input [${dataNascimento}]`,
-          );
-          return res
-            .status(401)
-            .json({ error: "Data de nascimento incorreta." });
+          return res.status(401).json({ error: "Data de nascimento incorreta." });
         }
       }
 
@@ -110,14 +143,22 @@ app.post("/api/login", async (req, res) => {
       }
     }
 
-    res.json({ ...aluno, role: "aluno" });
+    // GERA TOKEN PARA ALUNO
+    const token = jwt.sign(
+      { id: aluno.id, email: aluno.email, role: "aluno" },
+      JWT_SECRET,
+      { expiresIn: "12h" }
+    );
+
+    res.json({ ...aluno, role: "aluno", token });
   } catch (err) {
     console.error("ERRO NO LOGIN:", err);
     res.status(500).json({ error: "Erro interno no servidor de login." });
   }
 });
 
-app.get("/api/aluno/perfil/:email", async (req, res) => {
+// Perfil agora usa verificarToken
+app.get("/api/aluno/perfil/:email", verificarToken, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("alunos")
@@ -133,12 +174,12 @@ app.get("/api/aluno/perfil/:email", async (req, res) => {
   }
 });
 
-app.put("/api/aluno/perfil", async (req, res) => {
-  const { email, nome, avatar } = req.body; // CPF removido aqui
+app.put("/api/aluno/perfil", verificarToken, async (req, res) => {
+  const { email, nome, avatar } = req.body;
   try {
     const { error } = await supabase
       .from("alunos")
-      .update({ nome, avatar }) // CPF removido aqui
+      .update({ nome, avatar })
       .eq("email", email.trim().toLowerCase());
 
     if (error) throw error;
@@ -150,12 +191,11 @@ app.put("/api/aluno/perfil", async (req, res) => {
 });
 
 // ==========================================
-// REGISTRAR PONTO - CORRIGIDO
+// REGISTRAR PONTO - PROTEGIDA
 // ==========================================
-app.post("/api/ponto", async (req, res) => {
+app.post("/api/ponto", verificarToken, async (req, res) => {
   const { aluno_id, nota, revisao } = req.body;
   const { data: hoje, hora: agora } = getBrasiliaTime();
-  // Criamos o formato ISO completo para satisfazer o tipo 'timestamp' do banco
   const timestampCompleto = `${hoje}T${agora}`;
   const emailBusca = aluno_id.trim().toLowerCase();
 
@@ -170,7 +210,6 @@ app.post("/api/ponto", async (req, res) => {
     if (fetchError) throw fetchError;
 
     if (!pontoExistente) {
-      // CHECK-IN
       const { data: novoPonto, error: insError } = await supabase
         .from("presencas")
         .insert([
@@ -188,7 +227,6 @@ app.post("/api/ponto", async (req, res) => {
         ponto: novoPonto[0],
       });
     } else {
-      // CHECK-OUT
       if (pontoExistente.check_out) {
         return res.json({ msg: "Você já concluiu sua presença de hoje." });
       }
@@ -196,7 +234,7 @@ app.post("/api/ponto", async (req, res) => {
       const { data: pontoAtualizado, error: updError } = await supabase
         .from("presencas")
         .update({
-          check_out: timestampCompleto, // Agora enviamos Data + Hora
+          check_out: timestampCompleto,
           feedback_nota: nota || null,
           feedback_texto: revisao || "",
         })
@@ -216,10 +254,10 @@ app.post("/api/ponto", async (req, res) => {
 });
 
 // ==========================================
-// ADMIN E OUTROS (MANTIDOS)
+// ADMIN (TODAS PROTEGIDAS POR TOKEN + ADMIN)
 // ==========================================
 
-app.get("/api/admin/busca", async (req, res) => {
+app.get("/api/admin/busca", verificarToken, verificarAdmin, async (req, res) => {
   const { termo, turma, status } = req.query;
   try {
     let query = supabase.from("alunos").select("*");
@@ -249,7 +287,7 @@ app.get("/api/admin/busca", async (req, res) => {
   }
 });
 
-app.put("/api/admin/aluno/:email", async (req, res) => {
+app.put("/api/admin/aluno/:email", verificarToken, verificarAdmin, async (req, res) => {
   const { nome, email, cpf, data_nascimento } = req.body;
   const emailOriginal = decodeURIComponent(req.params.email);
   try {
@@ -264,7 +302,7 @@ app.put("/api/admin/aluno/:email", async (req, res) => {
   }
 });
 
-app.delete("/api/admin/aluno/:email", async (req, res) => {
+app.delete("/api/admin/aluno/:email", verificarToken, verificarAdmin, async (req, res) => {
   const emailOriginal = decodeURIComponent(req.params.email);
   try {
     await supabase.from("presencas").delete().eq("aluno_email", emailOriginal);
@@ -279,7 +317,7 @@ app.delete("/api/admin/aluno/:email", async (req, res) => {
   }
 });
 
-app.post("/api/admin/ponto-manual", async (req, res) => {
+app.post("/api/admin/ponto-manual", verificarToken, verificarAdmin, async (req, res) => {
   const { email, data, check_in, check_out } = req.body;
   try {
     const { error } = await supabase
@@ -292,14 +330,13 @@ app.post("/api/admin/ponto-manual", async (req, res) => {
   }
 });
 
-app.post("/api/admin/reset-session", async (req, res) => {
+app.post("/api/admin/reset-session", verificarToken, verificarAdmin, async (req, res) => {
   res.json({ msg: "Reset solicitado." });
 });
 
-app.get("/api/historico/aluno/:email", async (req, res) => {
+app.get("/api/historico/aluno/:email", verificarToken, async (req, res) => {
   try {
     const emailFormatado = req.params.email.trim().toLowerCase();
-
     const { data, error } = await supabase
       .from("presencas")
       .select("*")
@@ -308,10 +345,8 @@ app.get("/api/historico/aluno/:email", async (req, res) => {
 
     if (error) throw error;
 
-    // Ajuste para garantir que o Front-end entenda a data corretamente
     const historicoFormatado = data.map((item) => ({
       ...item,
-      // Forçamos a data a ser apenas YYYY-MM-DD para o Front conseguir comparar
       data: item.data.includes("T") ? item.data.split("T")[0] : item.data,
     }));
 
@@ -322,7 +357,7 @@ app.get("/api/historico/aluno/:email", async (req, res) => {
   }
 });
 
-app.get("/api/admin/stats/:turma", async (req, res) => {
+app.get("/api/admin/stats/:turma", verificarToken, verificarAdmin, async (req, res) => {
   const { turma } = req.params;
   const { data: hoje } = getBrasiliaTime();
   const agora = new Date();
@@ -364,18 +399,15 @@ app.get("/api/admin/stats/:turma", async (req, res) => {
   }
 });
 
-// RELATÓRIO ADMIN CORRIGIDO: Busca da tabela de presenças para garantir que apareçam os registros
-app.get("/api/admin/relatorio/:turma", async (req, res) => {
+app.get("/api/admin/relatorio/:turma", verificarToken, verificarAdmin, async (req, res) => {
   const { turma } = req.params;
   try {
-    // Buscamos na tabela ALUNOS e fazemos o JOIN com presencas pelo email
     let query = supabase
       .from("alunos")
       .select(
         "nome, email, cpf, formacao, presencas(data, check_in, check_out)",
       );
 
-    // Filtramos a turma pela tabela de ALUNOS, onde os dados existem
     if (turma !== "todos") {
       query = query.eq("formacao", turma);
     }

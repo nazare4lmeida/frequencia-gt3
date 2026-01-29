@@ -40,7 +40,10 @@ export default function Perfil({ user, setUser, onVoltar }) {
     try {
       const res = await fetch(`${API_URL}/aluno/perfil`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${user.token}` // Adicionado para segurança
+        },
         body: JSON.stringify({
           email: user.email,
           nome: nome.trim(),
@@ -51,6 +54,7 @@ export default function Perfil({ user, setUser, onVoltar }) {
       const data = await res.json();
 
       if (res.ok) {
+        // Mantemos o token atual no objeto ao atualizar o estado global
         const usuarioAtualizado = { ...user, nome: nome.trim(), avatar };
 
         // Atualiza o estado global do usuário
@@ -198,7 +202,7 @@ export default function Perfil({ user, setUser, onVoltar }) {
             <button
               className="btn-ponto in"
               onClick={salvarPerfil}
-              disabled={loading} // BOTÃO AGORA SEMPRE ATIVO
+              disabled={loading}
               style={{ flex: 2 }}
             >
               {loading ? "Salvando..." : "Salvar Alterações"}

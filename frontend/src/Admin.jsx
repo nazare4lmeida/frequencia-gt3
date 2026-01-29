@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { FORMACOES, API_URL } from "./Constants";
+import { fetchComToken } from "./Api";
 
-export default function Admin() {
+export default function Admin({ user }) {
   const [busca, setBusca] = useState("");
   const [filtroTurma, setFiltroTurma] = useState("todos");
   const [filtroStatus, setFiltroStatus] = useState("todos");
@@ -36,7 +37,9 @@ export default function Admin() {
   useEffect(() => {
     const carregarStats = async () => {
       try {
-        const res = await fetch(`${API_URL}/admin/stats/${filtroTurma}`);
+        const res = await fetch(`${API_URL}/admin/stats/${filtroTurma}`, {
+          headers: { Authorization: `Bearer ${user.token}` }, // Adicionado
+        });
         if (res.ok) {
           const data = await res.json();
           setStats(data);
@@ -46,32 +49,31 @@ export default function Admin() {
       }
     };
     carregarStats();
-  }, [filtroTurma]);
+  }, [filtroTurma, user.token]);
 
-  // 2. Lógica de busca e filtros (USANDO useCallback para corrigir erro de dependência)
+  // 2. Lógica de busca e filtros
   const buscarAlunos = useCallback(
     async (termo) => {
       setCarregando(true);
       try {
-        const res = await fetch(
-          `${API_URL}/admin/busca?termo=${termo}&turma=${filtroTurma}&status=${filtroStatus}`,
+        const res = await fetchComToken(
+          `/admin/busca?termo=${termo}&turma=${filtroTurma}&status=${filtroStatus}`,
         );
+
         if (res.ok) {
           const data = await res.json();
           setAlunos(data);
         }
       } catch (err) {
-        console.error("Erro na busca:", err);
+        console.error(err);
       } finally {
         setCarregando(false);
       }
     },
     [filtroTurma, filtroStatus],
   );
-
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Busca se houver texto OU se os filtros forem alterados
       if (busca || filtroStatus !== "todos" || filtroTurma !== "todos") {
         buscarAlunos(busca);
       } else {
@@ -92,7 +94,9 @@ export default function Admin() {
       data_nascimento: aluno.data_nascimento || "",
     });
     try {
-      const res = await fetch(`${API_URL}/historico/aluno/${aluno.email}`);
+      const res = await fetch(`${API_URL}/historico/aluno/${aluno.email}`, {
+        headers: { Authorization: `Bearer ${user.token}` }, // Adicionado
+      });
       if (res.ok) {
         const data = await res.json();
         setHistoricoAluno(data);
@@ -105,7 +109,7 @@ export default function Admin() {
     }
   };
 
-  // 4. Salvar Edição (CORRIGIDO: Envia o e-mail original para identificar na tabela)
+  // 4. Salvar Edição
   const salvarEdicao = async () => {
     const emailOriginal = alunoSelecionado.email;
 
@@ -120,7 +124,10 @@ export default function Admin() {
         `${API_URL}/admin/aluno/${encodeURIComponent(emailOriginal)}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user.token}`, // Adicionado
+          },
           body: JSON.stringify(dadosEdicao),
         },
       );
@@ -128,7 +135,7 @@ export default function Admin() {
       if (res.ok) {
         alert("Dados atualizados com sucesso!");
         setModalAberto(false);
-        buscarAlunos(busca); // Atualiza a lista na tela
+        buscarAlunos(busca);
       } else {
         const erro = await res.json();
         alert(`Erro: ${erro.error}`);
@@ -146,7 +153,10 @@ export default function Admin() {
     try {
       const res = await fetch(`${API_URL}/admin/ponto-manual`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`, // Adicionado
+        },
         body: JSON.stringify({ email: alunoSelecionado.email, ...manualPonto }),
       });
       if (res.ok) {
@@ -173,13 +183,14 @@ export default function Admin() {
         `${API_URL}/admin/aluno/${encodeURIComponent(alunoSelecionado.email)}`,
         {
           method: "DELETE",
+          headers: { Authorization: `Bearer ${user.token}` }, // Adicionado
         },
       );
 
       if (res.ok) {
         alert("Cadastro removido com sucesso!");
         setModalAberto(false);
-        buscarAlunos(busca); // Atualiza a lista da busca para remover o item deletado
+        buscarAlunos(busca);
       } else {
         const erro = await res.json();
         alert(`Erro: ${erro.error}`);
@@ -202,7 +213,10 @@ export default function Admin() {
     try {
       await fetch(`${API_URL}/admin/reset-session`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`, // Adicionado
+        },
         body: JSON.stringify({ email }),
       });
       alert("Solicitação de reset enviada.");
@@ -214,7 +228,9 @@ export default function Admin() {
   const exportarCSV = async () => {
     setCarregando(true);
     try {
-      const res = await fetch(`${API_URL}/admin/relatorio/${filtroTurma}`);
+      const res = await fetch(`${API_URL}/admin/relatorio/${filtroTurma}`, {
+        headers: { Authorization: `Bearer ${user.token}` }, // Adicionado
+      });
       const data = await res.json();
       if (!res.ok || !data || data.length === 0) {
         alert("Não existem dados disponíveis para exportar.");
@@ -266,7 +282,6 @@ export default function Admin() {
             value={filtroTurma}
             onChange={(e) => setFiltroTurma(e.target.value)}
           >
-            {/* Opção primária e padrão selecionada automaticamente */}
             <option value="todos">Todas as Turmas</option>
             {FORMACOES.map((f) => (
               <option key={f.id} value={f.id}>

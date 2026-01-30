@@ -8,8 +8,6 @@ Para entrar no sistema pela primeira vez, você precisará preencher quatro info
 
 Nome Completo: Digite seu nome completo.
 
-CPF: Apenas os números, sem pontos ou traços.
-
 Data de Nascimento: Selecione sua data de nascimento.
 
 Sua Formação: Escolha o curso no qual você está matriculado.

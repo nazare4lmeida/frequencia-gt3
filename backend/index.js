@@ -308,12 +308,12 @@ app.put(
   verificarToken,
   verificarAdmin,
   async (req, res) => {
-    const { nome, email, cpf, data_nascimento } = req.body;
+    const { nome, email, data_nascimento } = req.body;
     const emailOriginal = decodeURIComponent(req.params.email);
     try {
       const { error } = await supabase
         .from("alunos")
-        .update({ nome, email, cpf, data_nascimento })
+        .update({ nome, email, data_nascimento })
         .eq("email", emailOriginal);
       if (error) throw error;
       res.json({ msg: "Dados atualizados com sucesso" });
@@ -346,44 +346,49 @@ app.delete(
   },
 );
 
-app.post("/api/admin/ponto-manual", verificarToken, verificarAdmin, async (req, res) => {
-  const { email, data, check_in, check_out, nota, revisao } = req.body;
-  
-  // Função para transformar "18:30" em "2026-01-29T18:30:00"
-  const montarTimestamp = (valorHora) => {
-    if (!valorHora) return null;
-    // Se já estiver no formato completo (ISO), retorna ele mesmo
-    if (valorHora.includes("T")) return valorHora;
-    // Caso contrário, combina a data com a hora
-    return `${data}T${valorHora}:00`;
-  };
+app.post(
+  "/api/admin/ponto-manual",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { email, data, check_in, check_out, nota, revisao } = req.body;
 
-  try {
-    const { data: novoPonto, error } = await supabase
-      .from("presencas")
-      .insert([
-        { 
-          aluno_email: email.trim().toLowerCase(), 
-          data: data, 
-          check_in: montarTimestamp(check_in), 
-          check_out: montarTimestamp(check_out),
-          feedback_nota: nota || null,
-          feedback_texto: revisao || ""
-        }
-      ])
-      .select();
+    // Função para transformar "18:30" em "2026-01-29T18:30:00"
+    const montarTimestamp = (valorHora) => {
+      if (!valorHora) return null;
+      // Se já estiver no formato completo (ISO), retorna ele mesmo
+      if (valorHora.includes("T")) return valorHora;
+      // Caso contrário, combina a data com a hora
+      return `${data}T${valorHora}:00`;
+    };
 
-    if (error) {
-      console.error("ERRO SUPABASE:", error);
-      return res.status(400).json({ error: error.message });
+    try {
+      const { data: novoPonto, error } = await supabase
+        .from("presencas")
+        .insert([
+          {
+            aluno_email: email.trim().toLowerCase(),
+            data: data,
+            check_in: montarTimestamp(check_in),
+            check_out: montarTimestamp(check_out),
+            feedback_nota: nota || null,
+            feedback_texto: revisao || "",
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error("ERRO SUPABASE:", error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      res.json({ msg: "Ponto manual registrado!", ponto: novoPonto[0] });
+    } catch (err) {
+      console.error("ERRO SERVIDOR:", err);
+      res.status(500).json({ error: "Erro interno no servidor." });
     }
-
-    res.json({ msg: "Ponto manual registrado!", ponto: novoPonto[0] });
-  } catch (err) {
-    console.error("ERRO SERVIDOR:", err);
-    res.status(500).json({ error: "Erro interno no servidor." });
-  }
-});
+  },
+);
 
 app.post(
   "/api/admin/reset-session",
@@ -424,38 +429,37 @@ app.get(
   async (req, res) => {
     const { turma } = req.params;
     const { data: hoje } = getBrasiliaTime();
-    const agora = new Date();
-    const isSegunda = agora.getDay() === 1;
 
     try {
+      // 1. Pegamos os e-mails dos alunos daquela turma específica
+      let queryAlunos = supabase.from("alunos").select("email");
+      if (turma !== "todos") queryAlunos = queryAlunos.eq("formacao", turma);
+      const { data: listaAlunos } = await queryAlunos;
+      const emailsTurma = listaAlunos.map((a) => a.email);
+
+      // 2. Agora filtramos as presenças APENAS desses e-mails
       const { count: totalPresencas } = await supabase
         .from("presencas")
-        .select("*", { count: "exact", head: true });
+        .select("*", { count: "exact", head: true })
+        .in("aluno_email", emailsTurma);
+
       const { count: sessoesAtivas } = await supabase
         .from("presencas")
         .select("*", { count: "exact", head: true })
-        .eq("data", hoje);
+        .eq("data", hoje)
+        .in("aluno_email", emailsTurma);
+
       const { count: pendentesSaida } = await supabase
         .from("presencas")
         .select("*", { count: "exact", head: true })
         .eq("data", hoje)
-        .is("check_out", null);
-
-      let queryAlunos = supabase
-        .from("alunos")
-        .select("*", { count: "exact", head: true });
-      if (turma !== "todos") queryAlunos = queryAlunos.eq("formacao", turma);
-      const { count: totalAlunosTurma } = await queryAlunos;
-
-      let faltasHoje = isSegunda
-        ? (totalAlunosTurma || 0) - (sessoesAtivas || 0)
-        : 0;
+        .is("check_out", null)
+        .in("aluno_email", emailsTurma);
 
       res.json({
         totalPresencas: totalPresencas || 0,
         sessoesAtivas: sessoesAtivas || 0,
-        faltasHoje: faltasHoje < 0 ? 0 : faltasHoje,
-        totalAlunos: totalAlunosTurma || 0,
+        totalAlunos: emailsTurma.length,
         pendentesSaida: pendentesSaida || 0,
       });
     } catch (err) {
@@ -463,34 +467,27 @@ app.get(
     }
   },
 );
+app.get("/api/admin/relatorio/:turma", verificarToken, verificarAdmin, async (req, res) => {
+  const { turma } = req.params;
+  try {
+    let query = supabase
+      .from("alunos")
+      .select("nome, email, formacao, presencas(data, check_in, check_out)");
 
-app.get(
-  "/api/admin/relatorio/:turma",
-  verificarToken,
-  verificarAdmin,
-  async (req, res) => {
-    const { turma } = req.params;
-    try {
-      let query = supabase
-        .from("alunos")
-        .select(
-          "nome, email, cpf, formacao, presencas(data, check_in, check_out)",
-        );
-
-      if (turma !== "todos") {
-        query = query.eq("formacao", turma);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      res.json(data);
-    } catch (err) {
-      console.error("ERRO RELATORIO:", err);
-      res.status(500).json({ error: "Erro ao gerar relatório." });
+    if (turma !== "todos") {
+      query = query.eq("formacao", turma);
     }
-  },
-);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Se não houver alunos na turma, retorna array vazio em vez de erro
+    res.json(data || []);
+  } catch (err) {
+    console.error("ERRO RELATORIO:", err);
+    res.status(500).json({ error: "Erro ao gerar relatório." });
+  }
+});
 
 app.get("/api/health", (_, res) => res.json({ status: "online" }));
 

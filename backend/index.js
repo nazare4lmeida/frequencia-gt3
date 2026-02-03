@@ -273,7 +273,10 @@ app.get(
   verificarToken,
   verificarAdmin,
   async (req, res) => {
-    const { termo, turma, status } = req.query;
+    const { termo, turma, status, dataFiltro } = req.query; // Adicionado dataFiltro
+    const { data: hoje } = getBrasiliaTime();
+    const dataAlvo = dataFiltro || hoje; // Define se usa a data selecionada ou hoje
+
     try {
       let query = supabase.from("alunos").select("*");
       if (turma && turma !== "todos") query = query.eq("formacao", turma);
@@ -284,25 +287,61 @@ app.get(
       const { data: alunos, error } = await query;
       if (error) throw error;
 
-      if (status === "pendente_saida") {
-        const { data: hoje } = getBrasiliaTime();
+      let resultadoFinal = alunos; // Acréscimo para contagem
+
+      // Lógica para filtros baseados em presenças - Adicionado presentes_no_dia
+      if (status === "pendente_saida" || status === "checkout_antecipado" || status === "presentes_no_dia") {
         const { data: presencas } = await supabase
           .from("presencas")
-          .select("aluno_email")
-          .eq("data", hoje)
-          .is("check_out", null);
-        const emailsPendentes = presencas.map((p) => p.aluno_email);
-        return res.json(
-          alunos.filter((a) => emailsPendentes.includes(a.email)),
-        );
+          .select("aluno_email, check_out")
+          .eq("data", dataAlvo); // Usa dataAlvo em vez de hoje fixo
+
+        let emailsFiltrados = [];
+
+        if (status === "pendente_saida") {
+          // Check-in feito, mas check_out nulo
+          emailsFiltrados = presencas
+            .filter((p) => !p.check_out)
+            .map((p) => p.aluno_email);
+        } else if (status === "checkout_antecipado") {
+          emailsFiltrados = presencas
+            .filter((p) => {
+              if (!p.check_out) return false;
+
+              // Extrai apenas HH:mm independente do formato (ISO ou HH:mm:ss)
+              let horaExtraida;
+              if (p.check_out.includes("T")) {
+                horaExtraida = p.check_out.split("T")[1].substring(0, 5);
+              } else {
+                horaExtraida = p.check_out.substring(0, 5);
+              }
+
+              // Verifica se a hora é válida antes de comparar
+              const regexHora = /^([01]\d|2[0-3]):([0-5]\d)$/;
+              if (!regexHora.test(horaExtraida)) return false;
+
+              // Retorna true se saiu antes das 22:00
+              return horaExtraida < "22:00";
+            })
+            .map((p) => p.aluno_email);
+        } else if (status === "presentes_no_dia") {
+          // Apenas mapeia todos que possuem registro na data alvo
+          emailsFiltrados = presencas.map((p) => p.aluno_email);
+        }
+
+        resultadoFinal = alunos.filter((a) => emailsFiltrados.includes(a.email));
       }
-      res.json(alunos);
+
+      // Garante que o retorno seja sempre um objeto com as duas propriedades
+      res.json({
+        total: resultadoFinal.length,
+        alunos: resultadoFinal
+      });
     } catch (err) {
       res.status(500).json({ error: "Erro na busca administrativa." });
     }
   },
 );
-
 app.put(
   "/api/admin/aluno/:email",
   verificarToken,
@@ -431,34 +470,32 @@ app.get(
     const { data: hoje } = getBrasiliaTime();
 
     try {
-      // 1. Pegamos os e-mails dos alunos daquela turma específica
       let queryAlunos = supabase.from("alunos").select("email");
       if (turma !== "todos") queryAlunos = queryAlunos.eq("formacao", turma);
       const { data: listaAlunos } = await queryAlunos;
       const emailsTurma = listaAlunos.map((a) => a.email);
 
-      // 2. Agora filtramos as presenças APENAS desses e-mails
+      // Presenças totais no histórico desta turma
       const { count: totalPresencas } = await supabase
         .from("presencas")
         .select("*", { count: "exact", head: true })
         .in("aluno_email", emailsTurma);
 
-      const { count: sessoesAtivas } = await supabase
+      // Alunos que fizeram Check-in hoje
+      const { data: presencasHoje } = await supabase
         .from("presencas")
-        .select("*", { count: "exact", head: true })
+        .select("check_in, check_out")
         .eq("data", hoje)
         .in("aluno_email", emailsTurma);
 
-      const { count: pendentesSaida } = await supabase
-        .from("presencas")
-        .select("*", { count: "exact", head: true })
-        .eq("data", hoje)
-        .is("check_out", null)
-        .in("aluno_email", emailsTurma);
+      const sessoesAtivas = presencasHoje.length;
+      const concluidosHoje = presencasHoje.filter((p) => p.check_out).length;
+      const pendentesSaida = presencasHoje.filter((p) => !p.check_out).length;
 
       res.json({
         totalPresencas: totalPresencas || 0,
-        sessoesAtivas: sessoesAtivas || 0,
+        sessoesAtivas: sessoesAtivas || 0, // Total de check-ins hoje
+        concluidosHoje: concluidosHoje || 0, // Check-in + Check-out
         totalAlunos: emailsTurma.length,
         pendentesSaida: pendentesSaida || 0,
       });
@@ -467,27 +504,63 @@ app.get(
     }
   },
 );
-app.get("/api/admin/relatorio/:turma", verificarToken, verificarAdmin, async (req, res) => {
-  const { turma } = req.params;
-  try {
-    let query = supabase
-      .from("alunos")
-      .select("nome, email, formacao, presencas(data, check_in, check_out)");
+app.get(
+  "/api/admin/relatorio/:turma",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { turma } = req.params;
+    const { inicio, fim } = req.query; // Acréscimo: Captura datas de início e fim da URL
+    try {
+      let query = supabase
+        .from("alunos")
+        .select(
+          "nome, email, formacao, presencas(data, check_in, check_out, feedback_nota, feedback_texto)",
+        );
 
-    if (turma !== "todos") {
-      query = query.eq("formacao", turma);
+      if (turma !== "todos") query = query.eq("formacao", turma);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const relatorioFormatado = [];
+
+      data.forEach((aluno) => {
+        const nomeAluno = aluno.nome || "Não cadastrado";
+        const formacaoAluno = aluno.formacao || "Não informada";
+
+        if (aluno.presencas && aluno.presencas.length > 0) {
+          aluno.presencas.forEach((p) => {
+            // Acréscimo: Lógica de filtro por período
+            if (inicio && p.data < inicio) return;
+            if (fim && p.data > fim) return;
+
+            // Acréscimo: Função para extrair hora sem conversão de fuso
+            const formatarHoraBruta = (valor) => {
+              if (!valor) return "-";
+              return valor.includes("T") ? valor.split("T")[1].substring(0, 5) : valor.substring(0, 5);
+            };
+
+            relatorioFormatado.push({
+              Nome: nomeAluno,
+              Email: aluno.email,
+              Formacao: formacaoAluno,
+              Data: p.data,
+              Entrada: formatarHoraBruta(p.check_in),
+              Saida: formatarHoraBruta(p.check_out),
+              Nota: p.feedback_nota || "N/A",
+              Feedback: p.feedback_texto || "",
+            });
+          });
+        }
+      });
+
+      res.json(relatorioFormatado);
+    } catch (err) {
+      res.status(500).json({ error: "Erro ao gerar relatório." });
     }
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    // Se não houver alunos na turma, retorna array vazio em vez de erro
-    res.json(data || []);
-  } catch (err) {
-    console.error("ERRO RELATORIO:", err);
-    res.status(500).json({ error: "Erro ao gerar relatório." });
-  }
-});
+  },
+);
 
 app.get("/api/health", (_, res) => res.json({ status: "online" }));
 

@@ -7,6 +7,11 @@ export default function Admin({ user }) {
   const [filtroTurma, setFiltroTurma] = useState("todos");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [alunos, setAlunos] = useState([]);
+  const [totalEncontrado, setTotalEncontrado] = useState(0);
+  const [dataBusca, setDataBusca] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [periodoExport, setPeriodoExport] = useState({ inicio: "", fim: "" });
   const [stats, setStats] = useState({
     totalPresencas: 0,
     sessoesAtivas: 0,
@@ -57,12 +62,14 @@ export default function Admin({ user }) {
       setCarregando(true);
       try {
         const res = await fetchComToken(
-          `/admin/busca?termo=${termo}&turma=${filtroTurma}&status=${filtroStatus}`,
+          `/admin/busca?termo=${termo}&turma=${filtroTurma}&status=${filtroStatus}&dataFiltro=${dataBusca}`,
         );
 
         if (res.ok) {
           const data = await res.json();
-          setAlunos(data);
+          // Ajuste para o novo formato de objeto { total, alunos }
+          setAlunos(data.alunos || []);
+          setTotalEncontrado(data.total || 0);
         }
       } catch (err) {
         console.error(err);
@@ -70,19 +77,25 @@ export default function Admin({ user }) {
         setCarregando(false);
       }
     },
-    [filtroTurma, filtroStatus],
+    [filtroTurma, filtroStatus, dataBusca],
   );
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (busca || filtroStatus !== "todos" || filtroTurma !== "todos") {
+      // Adicionado dataBusca na verificação para disparar a busca
+      if (
+        busca ||
+        filtroStatus !== "todos" ||
+        filtroTurma !== "todos" ||
+        dataBusca
+      ) {
         buscarAlunos(busca);
       } else {
         setAlunos([]);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [busca, filtroStatus, filtroTurma, buscarAlunos]);
-
+  }, [busca, filtroStatus, filtroTurma, dataBusca, buscarAlunos]);
   // 3. Ver Detalhes
   const verDetalhes = async (aluno) => {
     setCarregando(true);
@@ -225,35 +238,46 @@ export default function Admin({ user }) {
     }
   };
 
-  const exportarCSV = async () => {
-    setCarregando(true);
+  const exportarRelatorio = async () => {
     try {
       const res = await fetch(`${API_URL}/admin/relatorio/${filtroTurma}`, {
-        headers: { Authorization: `Bearer ${user.token}` }, // Adicionado
+        headers: { Authorization: `Bearer ${user.token}` },
       });
-      const data = await res.json();
-      if (!res.ok || !data || data.length === 0) {
-        alert("Não existem dados disponíveis para exportar.");
+      const dados = await res.json();
+
+      if (!dados || dados.length === 0) {
+        alert("Nenhum dado para exportar.");
         return;
       }
-      const cabecalho = "Nome,Email,Presencas\n";
-      const csvContent = data
+
+      // Adicionamos Nota e Feedback no cabeçalho
+      const cabecalho =
+        "Nome;Email;Formação;Data;Entrada;Saída;Nota;Feedback\n";
+      const linhas = dados
         .map(
-          (aluno) =>
-            `"${aluno.nome}","${aluno.email}",${aluno.presencas?.length || 0}`,
+          (item) =>
+            `${item.Nome};${item.Email};${item.Formacao};${item.Data};${item.Entrada};${item.Saida};${item.Nota};"${item.Feedback.replace(/"/g, '""')}"`,
         )
         .join("\n");
-      const blob = new Blob(["\ufeff" + cabecalho + csvContent], {
+
+      const conteudoCSV = cabecalho + linhas;
+      // O "\ufeff" é o segredo para o Excel entender os acentos em Português
+      const blob = new Blob(["\ufeff" + conteudoCSV], {
         type: "text/csv;charset=utf-8;",
       });
+      const url = URL.createObjectURL(blob);
+
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute("download", `relatorio_${filtroTurma}.csv`);
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `frequencia_${filtroTurma}_${new Date().toISOString().split("T")[0]}.csv`,
+      );
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch {
-      alert("Erro ao exportar relatório.");
-    } finally {
-      setCarregando(false);
+      alert("Erro ao exportar planilha.");
     }
   };
 
@@ -319,6 +343,13 @@ export default function Admin({ user }) {
           Adesão da Aula: <strong>{stats.sessoesAtivas || 0} alunos</strong>{" "}
           fizeram check-in hoje.
         </p>
+      </div>
+
+      <div className="admin-stat-card card-destaque-hoje">
+        <span className="admin-stat-label">CONCLUÍRAM HOJE (SAÍDA OK)</span>
+        <h2 className="admin-stat-number" style={{ color: "#0a6547" }}>
+          {stats.concluidosHoje || 0}
+        </h2>
       </div>
 
       <div
@@ -396,6 +427,13 @@ export default function Admin({ user }) {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
+            <input
+              type="date"
+              className="input-modern"
+              style={{ width: "160px" }}
+              value={dataBusca}
+              onChange={(e) => setDataBusca(e.target.value)}
+            />
             <select
               className="input-modern"
               value={filtroStatus}
@@ -403,12 +441,30 @@ export default function Admin({ user }) {
               style={{ width: "180px" }}
             >
               <option value="todos">Todos Alunos</option>
+              <option value="presentes_no_dia">Presentes no Dia</option>
               <option value="pendente_saida">Esqueceram Saída</option>
+              <option value="checkout_antecipado">Saída Antecipada</option>
               <option value="incompleto">Cadastro Incompleto</option>
             </select>
           </div>
 
           <div className="historico-container" style={{ minHeight: "300px" }}>
+            {/* ACRESCENTE ESTAS LINHAS ABAIXO */}
+            {alunos.length > 0 && (
+              <div
+                style={{
+                  marginBottom: "15px",
+                  fontSize: "0.85rem",
+                  fontWeight: "700",
+                  color: "var(--teal-primary)",
+                  padding: "0 4px",
+                }}
+              >
+                Total filtrado: {totalEncontrado} aluno(s)
+              </div>
+            )}
+            {/* FIM DO ACRESCIMO */}
+
             {alunos.length > 0 ? (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -477,10 +533,41 @@ export default function Admin({ user }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div className="shadow-card" style={{ padding: "20px" }}>
             <h4>Relatórios</h4>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                margin: "15px 0",
+              }}
+            >
+              <label style={{ fontSize: "0.7rem", color: "var(--text-dim)" }}>
+                Início do período:
+              </label>
+              <input
+                type="date"
+                className="input-modern"
+                value={periodoExport.inicio}
+                onChange={(e) =>
+                  setPeriodoExport({ ...periodoExport, inicio: e.target.value })
+                }
+              />
+              <label style={{ fontSize: "0.7rem", color: "var(--text-dim)" }}>
+                Fim do período:
+              </label>
+              <input
+                type="date"
+                className="input-modern"
+                value={periodoExport.fim}
+                onChange={(e) =>
+                  setPeriodoExport({ ...periodoExport, fim: e.target.value })
+                }
+              />
+            </div>
             <button
               className="btn-ponto in"
               style={{ width: "100%" }}
-              onClick={exportarCSV}
+              onClick={exportarRelatorio}
             >
               Exportar CSV
             </button>

@@ -79,10 +79,9 @@ export default function Login({
               className="input-modern"
               value={form.dataNasc}
               onChange={(e) => {
-                let v = e.target.value.replace(/\D/g, ""); // Remove tudo que não é número
-                if (v.length > 8) v = v.slice(0, 8); // Limita a 8 dígitos
+                let v = e.target.value.replace(/\D/g, ""); 
+                if (v.length > 8) v = v.slice(0, 8);
 
-                // Aplica a máscara DD/MM/AAAA
                 if (v.length >= 5)
                   v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
                 else if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;

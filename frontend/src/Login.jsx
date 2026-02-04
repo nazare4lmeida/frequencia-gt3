@@ -9,6 +9,7 @@ export default function Login({
   setDadosSalvos,
   isDarkMode,
   setIsDarkMode,
+  popup
 }) {
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
@@ -22,8 +23,28 @@ export default function Login({
     setForm({ ...form, [field]: e.target.value });
   };
 
+  const popupStyles = {
+    position: "fixed",
+    top: "20px",
+    right: "20px",
+    backgroundColor: "#008080",
+    color: "#ffffff",
+    padding: "15px 25px",
+    borderRadius: "8px",
+    boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+    borderLeft: "5px solid #000000",
+    zIndex: 9999,
+    fontWeight: "bold",
+    animation: "slideIn 0.5s ease-out",
+  };
+
   return (
     <div className="login-container">
+      {popup?.show && (
+        <div style={popupStyles} className="custom-popup-modern">
+          {popup.msg}
+        </div>
+      )}
       {/* Botão de Tema Reposicionado via classe theme-toggle */}
       <button
         className="btn-action-circle theme-toggle"

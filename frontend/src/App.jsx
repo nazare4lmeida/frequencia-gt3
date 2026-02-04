@@ -116,6 +116,12 @@ export default function App() {
 
   const handleLogin = async () => {
     try {
+      const validEmailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+      if (!validEmailRegex.test(form.email)) {
+        exibirPopup("Por favor, insira um email válido.", "erro");
+        return;
+      }
       // 1. CONVERSÃO DE FORMATO: DD/MM/AAAA -> AAAA-MM-DD
       const partes = form.dataNasc.split("/");
       if (partes.length !== 3 || form.dataNasc.length < 10) {
@@ -125,7 +131,7 @@ export default function App() {
       // Remonta para o padrão que o campo DATE do Supabase exige
       const dataParaEnvio = `${partes[2]}-${partes[1]}-${partes[0]}`;
 
-      const res = await fetch(`${API_URL}/login`, {
+      const res = await fetch('/api/login', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -136,6 +142,8 @@ export default function App() {
       });
 
       const data = await res.json();
+
+      console.log("Resposta do login:", data);
 
       if (!res.ok) {
         exibirPopup(data.error || "Erro no login.", "erro");
@@ -211,9 +219,9 @@ export default function App() {
 
     try {
       const res = await fetchComToken("/ponto", "POST", {
-  aluno_id: user.email.trim().toLowerCase(),
-  ...extra,
-});
+        aluno_id: user.email.trim().toLowerCase(),
+        ...extra,
+      });
 
       const data = await res.json();
 
@@ -257,6 +265,7 @@ export default function App() {
         setDadosSalvos={setDadosSalvos}
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
+        popup={popup}
       />
     );
   }

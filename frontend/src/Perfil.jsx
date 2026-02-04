@@ -54,13 +54,8 @@ export default function Perfil({ user, setUser, onVoltar }) {
       const data = await res.json();
 
       if (res.ok) {
-        // Mantemos o token atual no objeto ao atualizar o estado global
         const usuarioAtualizado = { ...user, nome: nome.trim(), avatar };
-
-        // Atualiza o estado global do usuário
         setUser(usuarioAtualizado);
-
-        // Atualiza a sessão local para persistir o nome no Header e Login
         const sessionStr = localStorage.getItem("gt3_session");
         if (sessionStr) {
           const session = JSON.parse(sessionStr);

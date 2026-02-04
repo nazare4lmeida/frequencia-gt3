@@ -15,7 +15,8 @@ export default function Admin({ user }) {
   const [stats, setStats] = useState({
     totalPresencas: 0,
     sessoesAtivas: 0,
-    faltasHoje: 0,
+    concluidosHoje: 0, // Adicionado
+    pendentesSaida: 0, // Adicionado
     totalAlunos: 0,
   });
   const [carregando, setCarregando] = useState(false);
@@ -42,9 +43,13 @@ export default function Admin({ user }) {
   useEffect(() => {
     const carregarStats = async () => {
       try {
-        const res = await fetch(`${API_URL}/admin/stats/${filtroTurma}`, {
-          headers: { Authorization: `Bearer ${user.token}` }, // Adicionado
-        });
+        // Adicionamos ?dataFiltro=${dataBusca} para os círculos mudarem junto com o calendário
+        const res = await fetch(
+          `${API_URL}/admin/stats/${filtroTurma}?dataFiltro=${dataBusca}`,
+          {
+            headers: { Authorization: `Bearer ${user.token}` },
+          },
+        );
         if (res.ok) {
           const data = await res.json();
           setStats(data);
@@ -54,7 +59,7 @@ export default function Admin({ user }) {
       }
     };
     carregarStats();
-  }, [filtroTurma, user.token]);
+  }, [filtroTurma, dataBusca, user.token]);
 
   // 2. Lógica de busca e filtros
   const buscarAlunos = useCallback(
@@ -449,21 +454,31 @@ export default function Admin({ user }) {
           </div>
 
           <div className="historico-container" style={{ minHeight: "300px" }}>
-            {/* ACRESCENTE ESTAS LINHAS ABAIXO */}
-            {alunos.length > 0 && (
-              <div
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "15px",
+                padding: "10px 15px",
+                background: "rgba(0, 128, 128, 0.1)",
+                borderRadius: "8px",
+                borderLeft: "4px solid var(--teal-primary)",
+              }}
+            >
+              <span
                 style={{
-                  marginBottom: "15px",
-                  fontSize: "0.85rem",
-                  fontWeight: "700",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
                   color: "var(--teal-primary)",
-                  padding: "0 4px",
                 }}
               >
-                Total filtrado: {totalEncontrado} aluno(s)
-              </div>
-            )}
-            {/* FIM DO ACRESCIMO */}
+                LISTAGEM DE ALUNOS
+              </span>
+              <span style={{ fontSize: "0.85rem", fontWeight: "700" }}>
+                {totalEncontrado} registros encontrados
+              </span>
+            </div>
 
             {alunos.length > 0 ? (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -764,6 +779,13 @@ export default function Admin({ user }) {
                   disabled={carregando}
                 >
                   🗑️ Excluir Cadastro Permanente
+                </button>
+
+                <button
+                  onClick={() => (window.location.href = "/admin/limpeza")}
+                  className="btn-secondary"
+                >
+                  Limpar Nomes
                 </button>
 
                 <div

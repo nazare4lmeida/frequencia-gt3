@@ -5,6 +5,7 @@ import Login from "./Login";
 import Admin from "./Admin";
 import Perfil from "./Perfil";
 import { fetchComToken } from "./Api";
+import GestaoRapida from "./GestaoRapida";
 
 // Funções para o Calendário de Segundas-feiras
 const getProximasSegundas = (formacao) => {
@@ -69,6 +70,14 @@ export default function App() {
 
   const [alarmeAtivo] = useState(true);
 
+  useEffect(() => {
+    if (user?.role !== "admin") return;
+    const t = setTimeout(() => {
+      setView((v) => (v === "home" ? "admin" : v));
+    }, 0);
+    return () => clearTimeout(t);
+  }, [user?.role]);
+
   const popupStyles = {
     position: "fixed",
     top: "20px",
@@ -99,7 +108,7 @@ export default function App() {
       setCurrentTime(horaFormatada);
       if (alarmeAtivo && agora.getDay() === 1 && horaFormatada === "18:30") {
         exibirPopup(
-          "📢 Hora da aula! Não esqueça de fazer seu Check-in.",
+          " Hora da aula! Não esqueça de fazer seu Check-in.",
           "aviso",
         );
       }
@@ -109,9 +118,9 @@ export default function App() {
 
   const validarHorarioPonto = () => {
     return {
-      isSegunda: true, // Forçado para teste
-      podeCheckIn: true, // Forçado para teste
-      podeCheckOut: true, // Forçado para teste
+      isSegunda: true,
+      podeCheckIn: true,
+      podeCheckOut: true,
     };
   };
 
@@ -130,7 +139,6 @@ export default function App() {
         exibirPopup("Digite a data completa: DD/MM/AAAA", "erro");
         return;
       }
-      // Remonta para o padrão que o campo DATE do Supabase exige
       const dataParaEnvio = `${partes[2]}-${partes[1]}-${partes[0]}`;
 
       const res = await fetch(`${API_URL}/login`, {
@@ -138,7 +146,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: form.email,
-          dataNascimento: dataParaEnvio, // Enviamos a data convertida aqui
+          dataNascimento: dataParaEnvio,
           formacao: form.formacao,
         }),
       });
@@ -155,12 +163,10 @@ export default function App() {
       localStorage.removeItem("gt3_session");
       setUser(data);
 
-      // 2. PERSISTÊNCIA: Salvamos para o "Bem-vindo de volta"
       localStorage.setItem(
         "gt3_remember",
         JSON.stringify({
           email: data.email,
-          // Aqui guardamos no formato BR para o input de texto não bugar ao voltar
           dataNasc: form.dataNasc,
           nome: data.nome || "",
           formacao: data.formacao,
@@ -183,7 +189,6 @@ export default function App() {
       user?.email ||
       JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
 
-    // Pegamos o token do estado user ou do localStorage
     const token =
       user?.token ||
       JSON.parse(localStorage.getItem("gt3_session"))?.userData?.token;
@@ -197,7 +202,7 @@ export default function App() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // Acréscimo do Token
+            Authorization: `Bearer ${token}`,
           },
         },
       );
@@ -311,20 +316,41 @@ export default function App() {
         <div className="header-right">
           <span className="clock">🕒 {currentTime}</span>
           <div className="nav-actions">
-            {user.role === "admin" && (
-              <button
-                className="btn-secondary"
-                onClick={() => setView(view === "admin" ? "home" : "admin")}
-              >
-                {view === "admin" ? "Início" : "Painel Admin"}
-              </button>
+            {user.role === "admin" ? (
+              // Links exclusivos do Admin
+              <>
+                <button
+                  className="btn-secondary"
+                  style={{
+                    border: view === "admin" ? "2px solid #008080" : "none",
+                  }}
+                  onClick={() => setView("admin")}
+                >
+                  Dashboard
+                </button>
+                <button
+                  className="btn-secondary"
+                  style={{
+                    border: view === "limpeza" ? "2px solid #008080" : "none",
+                  }}
+                  onClick={() => setView("limpeza")}
+                >
+                  Edição
+                </button>
+              </>
+            ) : (
+              // Links exclusivos do Aluno
+              <>
+                <button
+                  className="btn-action-circle"
+                  title="Meu Perfil"
+                  onClick={() => setView("perfil")}
+                >
+                  👤
+                </button>
+              </>
             )}
-            <button
-              className="btn-action-circle"
-              onClick={() => setView("perfil")}
-            >
-              👤
-            </button>
+
             <button
               className="btn-action-circle"
               title="Alternar Tema"
@@ -332,6 +358,7 @@ export default function App() {
             >
               {isDarkMode ? "○" : "●"}
             </button>
+
             <button
               className="btn-secondary"
               onClick={() => {
@@ -346,13 +373,15 @@ export default function App() {
       </header>
 
       {view === "admin" && user.role === "admin" ? (
-        <Admin user={user} /> // Adicionado user={user}
-      ) : view === "perfil" ? (
+        <Admin user={user} setView={setView} />
+      ) : view === "perfil" && user.role !== "admin" ? (
         <Perfil
           user={user}
           setUser={setUser}
           onVoltar={() => setView("home")}
         />
+      ) : view === "limpeza" && user.role === "admin" ? (
+        <GestaoRapida user={user} setView={setView} />
       ) : (
         <main className="content-grid">
           <div className="aula-card shadow-card">
@@ -373,7 +402,6 @@ export default function App() {
               ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
               segunda-feira.
             </div>
-
             <div style={{ margin: "20px 0", textAlign: "center" }}>
               {(() => {
                 const { isSegunda, podeCheckIn, podeCheckOut } =

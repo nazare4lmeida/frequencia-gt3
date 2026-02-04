@@ -1,7 +1,7 @@
 const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
 const cors = require("cors");
-const jwt = require("jsonwebtoken"); // Adicionado
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const app = express();
@@ -11,7 +11,7 @@ app.use(express.json());
 // Verificação de segurança para as chaves do Supabase e JWT
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
-const JWT_SECRET = process.env.JWT_SECRET; // Adicionado no seu .env
+const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!supabaseUrl || !supabaseKey || !JWT_SECRET) {
   console.error(
@@ -22,7 +22,7 @@ if (!supabaseUrl || !supabaseKey || !JWT_SECRET) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ==========================================
-// MIDDLEWARES DE SEGURANÇA (NOVO)
+// MIDDLEWARES DE SEGURANÇA
 // ==========================================
 
 const verificarToken = (req, res, next) => {
@@ -82,7 +82,9 @@ app.post("/api/login", async (req, res) => {
 
   const emailFormatado = email.trim().toLowerCase();
 
+  // ==========================================
   // LOGIN ADMIN
+  // ==========================================
   if (
     emailFormatado === process.env.ADMIN_EMAIL &&
     dataNascimento === process.env.ADMIN_PASS
@@ -96,7 +98,7 @@ app.post("/api/login", async (req, res) => {
       nome: "Administrador",
       role: "admin",
       email: emailFormatado,
-      token, // Envia o token para o front
+      token,
     });
   }
 
@@ -168,7 +170,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// Perfil agora usa verificarToken
 app.get("/api/aluno/perfil/:email", verificarToken, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -273,9 +274,9 @@ app.get(
   verificarToken,
   verificarAdmin,
   async (req, res) => {
-    const { termo, turma, status, dataFiltro } = req.query; // Adicionado dataFiltro
+    const { termo, turma, status, dataFiltro } = req.query;
     const { data: hoje } = getBrasiliaTime();
-    const dataAlvo = dataFiltro || hoje; // Define se usa a data selecionada ou hoje
+    const dataAlvo = dataFiltro || hoje;
 
     try {
       let query = supabase.from("alunos").select("*");
@@ -287,19 +288,20 @@ app.get(
       const { data: alunos, error } = await query;
       if (error) throw error;
 
-      let resultadoFinal = alunos; // Acréscimo para contagem
-
-      // Lógica para filtros baseados em presenças - Adicionado presentes_no_dia
-      if (status === "pendente_saida" || status === "checkout_antecipado" || status === "presentes_no_dia") {
+      let resultadoFinal = alunos;
+      if (
+        status === "pendente_saida" ||
+        status === "checkout_antecipado" ||
+        status === "presentes_no_dia"
+      ) {
         const { data: presencas } = await supabase
           .from("presencas")
           .select("aluno_email, check_out")
-          .eq("data", dataAlvo); // Usa dataAlvo em vez de hoje fixo
+          .eq("data", dataAlvo);
 
         let emailsFiltrados = [];
 
         if (status === "pendente_saida") {
-          // Check-in feito, mas check_out nulo
           emailsFiltrados = presencas
             .filter((p) => !p.check_out)
             .map((p) => p.aluno_email);
@@ -307,41 +309,70 @@ app.get(
           emailsFiltrados = presencas
             .filter((p) => {
               if (!p.check_out) return false;
-
-              // Extrai apenas HH:mm independente do formato (ISO ou HH:mm:ss)
               let horaExtraida;
               if (p.check_out.includes("T")) {
                 horaExtraida = p.check_out.split("T")[1].substring(0, 5);
               } else {
                 horaExtraida = p.check_out.substring(0, 5);
               }
-
-              // Verifica se a hora é válida antes de comparar
               const regexHora = /^([01]\d|2[0-3]):([0-5]\d)$/;
               if (!regexHora.test(horaExtraida)) return false;
-
-              // Retorna true se saiu antes das 22:00
               return horaExtraida < "22:00";
             })
             .map((p) => p.aluno_email);
         } else if (status === "presentes_no_dia") {
-          // Apenas mapeia todos que possuem registro na data alvo
           emailsFiltrados = presencas.map((p) => p.aluno_email);
         }
 
-        resultadoFinal = alunos.filter((a) => emailsFiltrados.includes(a.email));
+        resultadoFinal = alunos.filter((a) =>
+          emailsFiltrados.includes(a.email),
+        );
       }
+      const { data: todasPresencas, error: erroP } = await supabase
+        .from("presencas")
+        .select("aluno_email, data");
 
-      // Garante que o retorno seja sempre um objeto com as duas propriedades
+      if (erroP) console.error("Erro ao buscar presenças:", erroP);
+      const contarAulasPassadas = () => {
+        const dataInicio = new Date("2026-02-02");
+        let contagem = 0;
+        let d = new Date(dataInicio);
+
+        while (d <= hoje) {
+          if (d.getDay() === 1) contagem++;
+          d.setDate(d.getDate() + 1);
+        }
+        return contagem;
+      };
+
+      const aulasOcorridas = contarAulasPassadas();
+
+      const resultadoFinalComCalculos = resultadoFinal.map((aluno) => {
+        const emailAlu = aluno.email?.trim().toLowerCase();
+        const presencasConfirmadas = todasPresencas
+          ? todasPresencas.filter(
+              (p) => p.aluno_email?.trim().toLowerCase() === emailAlu,
+            ).length
+          : 0;
+        const faltasReais = Math.max(0, aulasOcorridas - presencasConfirmadas);
+
+        return {
+          ...aluno,
+          total_presencas: presencasConfirmadas,
+          total_faltas: faltasReais,
+        };
+      });
       res.json({
-        total: resultadoFinal.length,
-        alunos: resultadoFinal
+        total: resultadoFinalComCalculos.length,
+        alunos: resultadoFinalComCalculos,
       });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "Erro na busca administrativa." });
     }
   },
 );
+
 app.put(
   "/api/admin/aluno/:email",
   verificarToken,
@@ -392,12 +423,9 @@ app.post(
   async (req, res) => {
     const { email, data, check_in, check_out, nota, revisao } = req.body;
 
-    // Função para transformar "18:30" em "2026-01-29T18:30:00"
     const montarTimestamp = (valorHora) => {
       if (!valorHora) return null;
-      // Se já estiver no formato completo (ISO), retorna ele mesmo
       if (valorHora.includes("T")) return valorHora;
-      // Caso contrário, combina a data com a hora
       return `${data}T${valorHora}:00`;
     };
 
@@ -438,6 +466,33 @@ app.post(
   },
 );
 
+app.patch(
+  "/api/admin/limpeza-nome",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { email, nome } = req.body;
+
+    if (!email || nome === undefined) {
+      return res.status(400).json({ error: "E-mail e nome são obrigatórios." });
+    }
+
+    try {
+      const { error } = await supabase
+        .from("alunos")
+        .update({ nome: nome.trim() })
+        .eq("email", email.trim().toLowerCase());
+
+      if (error) throw error;
+
+      res.json({ msg: "Nome atualizado com sucesso!" });
+    } catch (err) {
+      console.error("ERRO LIMPEZA:", err);
+      res.status(500).json({ error: "Erro ao atualizar nome no banco." });
+    }
+  },
+);
+
 app.get("/api/historico/aluno/:email", verificarToken, async (req, res) => {
   try {
     const emailFormatado = req.params.email.trim().toLowerCase();
@@ -467,42 +522,51 @@ app.get(
   verificarAdmin,
   async (req, res) => {
     const { turma } = req.params;
+    const { dataFiltro } = req.query; 
     const { data: hoje } = getBrasiliaTime();
+    const dataAlvo = dataFiltro || hoje; 
 
     try {
+      // 1. Lista de emails da turma (para saber quem pertence a onde)
       let queryAlunos = supabase.from("alunos").select("email");
       if (turma !== "todos") queryAlunos = queryAlunos.eq("formacao", turma);
-      const { data: listaAlunos } = await queryAlunos;
-      const emailsTurma = listaAlunos.map((a) => a.email);
+      
+      const { data: listaAlunos, error: errA } = await queryAlunos;
+      if (errA) throw errA;
 
-      // Presenças totais no histórico desta turma
-      const { count: totalPresencas } = await supabase
-        .from("presencas")
-        .select("*", { count: "exact", head: true })
-        .in("aluno_email", emailsTurma);
+      const emailsTurma = (listaAlunos || []).map((a) => a.email);
 
-      // Alunos que fizeram Check-in hoje
-      const { data: presencasHoje } = await supabase
-        .from("presencas")
-        .select("check_in, check_out")
-        .eq("data", hoje)
-        .in("aluno_email", emailsTurma);
+      // 2. Total Histórico (Geral da turma ou do sistema)
+      let queryTotal = supabase.from("presencas").select("*", { count: "exact", head: true });
+      if (turma !== "todos") {
+        queryTotal = queryTotal.in("aluno_email", emailsTurma);
+      }
+      const { count: totalPresencas } = await queryTotal;
 
-      const sessoesAtivas = presencasHoje.length;
-      const concluidosHoje = presencasHoje.filter((p) => p.check_out).length;
-      const pendentesSaida = presencasHoje.filter((p) => !p.check_out).length;
+      // 3. Dados dos Círculos (Baseados na dataAlvo)
+      let queryHoje = supabase.from("presencas").select("check_in, check_out").eq("data", dataAlvo);
+      if (turma !== "todos") {
+        queryHoje = queryHoje.in("aluno_email", emailsTurma);
+      }
+      
+      const { data: presencasDia, error: errH } = await queryHoje;
+      if (errH) throw errH;
 
+      const dados = presencasDia || [];
+
+      // AQUI ESTAVA O ERRO: Use listaAlunos.length em vez de totalAlunos
       res.json({
         totalPresencas: totalPresencas || 0,
-        sessoesAtivas: sessoesAtivas || 0, // Total de check-ins hoje
-        concluidosHoje: concluidosHoje || 0, // Check-in + Check-out
-        totalAlunos: emailsTurma.length,
-        pendentesSaida: pendentesSaida || 0,
+        totalAlunos: (listaAlunos || []).length, // Corrigido aqui
+        sessoesAtivas: dados.length,
+        concluidosHoje: dados.filter(p => p.check_out).length,
+        pendentesSaida: dados.filter(p => !p.check_out).length
       });
     } catch (err) {
+      console.error("ERRO NO STATS:", err);
       res.status(500).json({ error: "Erro ao carregar estatísticas." });
     }
-  },
+  }
 );
 app.get(
   "/api/admin/relatorio/:turma",
@@ -510,7 +574,7 @@ app.get(
   verificarAdmin,
   async (req, res) => {
     const { turma } = req.params;
-    const { inicio, fim } = req.query; // Acréscimo: Captura datas de início e fim da URL
+    const { inicio, fim } = req.query;
     try {
       let query = supabase
         .from("alunos")
@@ -531,14 +595,13 @@ app.get(
 
         if (aluno.presencas && aluno.presencas.length > 0) {
           aluno.presencas.forEach((p) => {
-            // Acréscimo: Lógica de filtro por período
             if (inicio && p.data < inicio) return;
             if (fim && p.data > fim) return;
-
-            // Acréscimo: Função para extrair hora sem conversão de fuso
             const formatarHoraBruta = (valor) => {
               if (!valor) return "-";
-              return valor.includes("T") ? valor.split("T")[1].substring(0, 5) : valor.substring(0, 5);
+              return valor.includes("T")
+                ? valor.split("T")[1].substring(0, 5)
+                : valor.substring(0, 5);
             };
 
             relatorioFormatado.push({

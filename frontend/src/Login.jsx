@@ -9,7 +9,8 @@ export default function Login({
   setDadosSalvos,
   isDarkMode,
   setIsDarkMode,
-  popup
+  popup,
+  loading,
 }) {
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
@@ -129,9 +130,9 @@ export default function Login({
             <button
               onClick={handleLogin}
               className="btn-ponto in"
-              disabled={!form.formacao}
+              disabled={!form.formacao || loading}
             >
-              Entrar no Portal
+              {loading ? "Entrando..." : "Registrar Ponto"}
             </button>
           </div>
         )}

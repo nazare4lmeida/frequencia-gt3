@@ -58,6 +58,7 @@ export default function App() {
     const salvo = localStorage.getItem("gt3_theme");
     return salvo ? JSON.parse(salvo) : true;
   });
+  const [loading, setLoading] = useState(false);
 
   const [currentTime, setCurrentTime] = useState(
     new Date().toLocaleTimeString("pt-BR", {
@@ -116,6 +117,7 @@ export default function App() {
 
   const handleLogin = async () => {
     try {
+      setLoading(true);
       const validEmailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
       if (!validEmailRegex.test(form.email)) {
@@ -131,7 +133,7 @@ export default function App() {
       // Remonta para o padrão que o campo DATE do Supabase exige
       const dataParaEnvio = `${partes[2]}-${partes[1]}-${partes[0]}`;
 
-      const res = await fetch('/api/login', {
+      const res = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -172,6 +174,8 @@ export default function App() {
     } catch (err) {
       console.error("Erro no fetch de login:", err);
       exibirPopup("Erro de conexão.", "erro");
+    } finally {
+      setLoading(false);
     }
   };
   const carregarHistorico = useCallback(async () => {
@@ -266,6 +270,7 @@ export default function App() {
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
         popup={popup}
+        loading={loading}
       />
     );
   }

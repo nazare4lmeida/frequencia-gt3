@@ -6,31 +6,42 @@ import Admin from "./Admin";
 import Perfil from "./Perfil";
 import { fetchComToken } from "./Api";
 import GestaoRapida from "./GestaoRapida";
+import HomeAdmin from "./HomeAdmin";
 
-// Funções para o Calendário de Segundas-feiras
-const getProximasSegundas = (formacao) => {
-  const segundas = [];
-  const dataLimite =
-    formacao === "fullstack" ? new Date("2026-03-31") : new Date("2026-04-30");
+const getProximasAulas = (formacao) => {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
 
-  const agora = new Date();
-  const hojeBrasilia = new Date(
-    agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
-  );
-
-  let dia = new Date(hojeBrasilia);
-  dia.setDate(hojeBrasilia.getDate() + ((1 + 7 - hojeBrasilia.getDay()) % 7));
-
-  while (dia <= dataLimite) {
-    segundas.push(new Date(dia).toLocaleDateString("pt-BR"));
-    dia.setDate(dia.getDate() + 7);
+  let cronogramaAtivo = [];
+  if (formacao === "fullstack") {
+    cronogramaAtivo = ["02/02/2026", "09/02/2026", "16/02/2026", "23/02/2026"];
+  } else {
+    cronogramaAtivo = [
+      "02/02/2026",
+      "09/02/2026",
+      "23/02/2026",
+      "02/03/2026",
+      "09/03/2026",
+      "16/03/2026",
+      "23/03/2026",
+      "30/03/2026",
+      "06/04/2026",
+      "13/04/2026",
+      "22/04/2026",
+    ];
   }
-  return segundas.slice(0, 4);
+
+  return cronogramaAtivo
+    .filter((dataStr) => {
+      const [dia, mes, ano] = dataStr.split("/");
+      return new Date(ano, mes - 1, dia) >= hoje;
+    })
+    .slice(0, 5);
 };
 
 export default function App() {
   const [user, setUser] = useState(() => {
-    const s = localStorage.getItem("gt3_session");
+    const s = localStorage.getItem("gtech_session");
     if (!s) return null;
     try {
       const { userData, timestamp } = JSON.parse(s);
@@ -42,7 +53,7 @@ export default function App() {
   });
 
   const [dadosSalvos, setDadosSalvos] = useState(() => {
-    const salvo = localStorage.getItem("gt3_remember");
+    const salvo = localStorage.getItem("gtech_remember");
     return salvo ? JSON.parse(salvo) : null;
   });
 
@@ -56,7 +67,7 @@ export default function App() {
     modal: false,
   });
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const salvo = localStorage.getItem("gt3_theme");
+    const salvo = localStorage.getItem("gtech_theme");
     return salvo ? JSON.parse(salvo) : true;
   });
 
@@ -66,6 +77,12 @@ export default function App() {
       minute: "2-digit",
     }),
   );
+
+  const [stats] = useState({
+    totalAlunos: 0,
+    sessoesAtivas: 0,
+    totalPresencas: 0,
+  });
 
   const [alarmeAtivo] = useState(true);
 
@@ -115,11 +132,45 @@ export default function App() {
     return () => clearInterval(timer);
   }, [alarmeAtivo]);
 
+  // --- Trecho Completo GTech: Validação de Horário + Login ---
+
   const validarHorarioPonto = () => {
+    // --- CONFIGURAÇÃO DE TESTE ---
+    const MODO_TESTE = true; // Altere para false quando o sistema for para produção
+    // ----------------------------
+
+    const agora = new Date();
+    const diaSemana = agora.getDay(); // 1 = Segunda
+    const hora = agora.getHours();
+    const minuto = agora.getMinutes();
+    const horaAtualDecimal = hora + minuto / 60;
+
+    // Regra GTech: Aulas apenas nas Segundas (1)
+    let isDiaDeAula = diaSemana === 1;
+    let janelaCheckIn = { inicio: 18.5, fim: 20.5 }; // 18:30 às 20:30
+    let janelaCheckOut = { inicio: 21.5, fim: 23.9 }; // Após as 21:30
+
+    // Se o modo teste estiver ativo, libera para gravar vídeo/testar em qualquer dia
+    if (MODO_TESTE) {
+      return {
+        isDiaDeAula: true,
+        podeCheckIn: true,
+        podeCheckOut: true,
+        regras: "MODO TESTE ATIVO",
+        diasCorretos: "Segundas-feiras (GTech)",
+      };
+    }
+
     return {
-      isSegunda: true,
-      podeCheckIn: true,
-      podeCheckOut: true,
+      isDiaDeAula,
+      podeCheckIn:
+        horaAtualDecimal >= janelaCheckIn.inicio &&
+        horaAtualDecimal <= janelaCheckIn.fim,
+      podeCheckOut:
+        horaAtualDecimal >= janelaCheckOut.inicio &&
+        horaAtualDecimal <= janelaCheckOut.fim,
+      regras: "18:30 e 21:30",
+      diasCorretos: "Segundas-feiras",
     };
   };
 
@@ -149,11 +200,12 @@ export default function App() {
         return;
       }
 
-      localStorage.removeItem("gt3_session");
+      // Mudança nas chaves para o padrão GTech
+      localStorage.removeItem("gtech_session");
       setUser(data);
 
       localStorage.setItem(
-        "gt3_remember",
+        "gtech_remember",
         JSON.stringify({
           email: data.email,
           dataNasc: form.dataNasc,
@@ -163,22 +215,22 @@ export default function App() {
       );
 
       localStorage.setItem(
-        "gt3_session",
+        "gtech_session",
         JSON.stringify({ userData: data, timestamp: Date.now() }),
       );
     } catch (err) {
-      console.error("Erro no fetch de login:", err);
+      console.error("Erro no login GTech:", err);
       exibirPopup("Erro de conexão.", "erro");
     }
   };
-  const carregarHistorico = useCallback(async () => {
-    const emailParaBusca =
-      user?.email ||
-      JSON.parse(localStorage.getItem("gt3_session"))?.userData?.email;
 
-    const token =
-      user?.token ||
-      JSON.parse(localStorage.getItem("gt3_session"))?.userData?.token;
+  const carregarHistorico = useCallback(async () => {
+    const sessionData = localStorage.getItem("gtech_session");
+    if (!sessionData) return;
+
+    const parsedSession = JSON.parse(sessionData);
+    const emailParaBusca = user?.email || parsedSession?.userData?.email;
+    const token = user?.token || parsedSession?.userData?.token;
 
     if (!emailParaBusca || user?.role === "admin" || !token) return;
 
@@ -198,7 +250,7 @@ export default function App() {
         setHistorico(data);
       }
     } catch (err) {
-      console.error("Erro ao carregar histórico:", err);
+      console.error("Erro ao carregar histórico GTech:", err);
     }
   }, [user]);
 
@@ -234,7 +286,7 @@ export default function App() {
       if (!extra.nota) {
         setTimeout(() => {
           exibirPopup(
-            "📌 Lembrete: O Check-out deve ser feito hoje entre 22:00 e 22:30.",
+            "📌 Lembrete: O Check-out deve ser feito a partir das 21:30.",
             "aviso",
           );
         }, 1000);
@@ -248,7 +300,7 @@ export default function App() {
 
   useEffect(() => {
     document.body.classList.toggle("dark", isDarkMode);
-    localStorage.setItem("gt3_theme", JSON.stringify(isDarkMode));
+    localStorage.setItem("gtech_theme", JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
   if (!user) {
@@ -265,13 +317,6 @@ export default function App() {
     );
   }
 
-  // --- LÓGICA DE COMPARAÇÃO DE DATA CORRIGIDA ---
-  const hojeISO = new Date().toLocaleDateString("en-CA");
-  const pontoHoje = historico.find((h) => {
-    const dataRegistro = h.data?.substring(0, 10);
-    return dataRegistro === hojeISO;
-  });
-
   const totalPresencas = historico.length;
   const totalFaltas = 0;
   const nomeExibicao = user.nome || user.email.split("@")[0];
@@ -284,12 +329,12 @@ export default function App() {
       )}
 
       <header className="glass-header">
-        <div
-          className="brand-logo"
-          onClick={() => setView("home")}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="logo-circle">GT 3.0</div>
+        <div className="brand-logo" onClick={() => setView("home")}>
+          <img
+            src="/logo-gt3.png"
+            alt="Logo Geração Tech"
+            className="brand-logo-img"
+          />
           <div className="brand-text">
             Registro de Frequência
             <span>Geração Tech 3.0</span>
@@ -304,6 +349,12 @@ export default function App() {
             {user.role === "admin" ? (
               // Links exclusivos do Admin
               <>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setView("home")}
+                >
+                  Home
+                </button>
                 <button
                   className="btn-secondary"
                   style={{
@@ -347,7 +398,7 @@ export default function App() {
             <button
               className="btn-secondary"
               onClick={() => {
-                localStorage.removeItem("gt3_session");
+                localStorage.removeItem("gtech_session");
                 setUser(null);
               }}
             >
@@ -357,7 +408,14 @@ export default function App() {
         </div>
       </header>
 
-      {view === "admin" && user.role === "admin" ? (
+      {/* 1. SE FOR ADMIN E ESTIVER NA HOME OU NA VIEW ADMIN */}
+      {view === "home" && user.role === "admin" ? (
+        <HomeAdmin
+          stats={stats} // Agora 'stats' está definido e virá do banco de dados
+          proximasAulas={getProximasAulas("fullstack")}
+          user={user}
+        />
+      ) : view === "admin" && user.role === "admin" ? (
         <Admin user={user} setView={setView} />
       ) : view === "perfil" && user.role !== "admin" ? (
         <Perfil
@@ -368,152 +426,264 @@ export default function App() {
       ) : view === "limpeza" && user.role === "admin" ? (
         <GestaoRapida user={user} setView={setView} />
       ) : (
-        <main className="content-grid">
-          <div className="aula-card shadow-card">
+        /* 4. LAYOUT EXCLUSIVO DO ALUNO (SÓ APARECE SE NÃO FOR ADMIN) */
+        <main
+          className="aluno-main-wrapper"
+          style={{ maxWidth: "800px", margin: "0 auto", padding: "20px" }}
+        >
+          {/* CARD PRINCIPAL DE PONTO - LARGURA TOTAL DO WRAPPER */}
+          <div
+            className="aula-card shadow-card"
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              marginBottom: "25px",
+            }}
+          >
             <div className="card-header-info">
               <p style={{ color: "var(--text-dim)" }}>
                 {new Date().toLocaleDateString("pt-BR")}
               </p>
-              <h2 style={{ color: "var(--text-dim)" }}>Olá, {nomeExibicao}!</h2>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <h2 style={{ color: "var(--text-dim)", margin: 0 }}>
+                  Olá, {nomeExibicao}!
+                </h2>
+                <span
+                  className="user-badge"
+                  style={{ fontSize: "0.8rem", padding: "2px 10px" }}
+                >
+                  {user.formacao === "fullstack"
+                    ? "Fullstack Developer"
+                    : "IA Generativa + Soft Skills"}
+                </span>
+              </div>
             </div>
 
-            <div
-              className="info-banner"
-              style={{
-                color: "var(--text-dim)",
-                border: "1px solid var(--border-subtle)",
-              }}
-            >
-              ℹ Informação: Check-in e Check-out apenas para aulas ao vivo de
-              segunda-feira.
+            <div className="info-banner" style={{ margin: "15px 0" }}>
+              ℹ Informação: Check-in e Check-out disponíveis nos dias de aula
+              presencial da sua formação.
             </div>
+
             <div style={{ margin: "20px 0", textAlign: "center" }}>
               {(() => {
-                const { isSegunda, podeCheckIn, podeCheckOut } =
+                const { isDiaDeAula, podeCheckIn, podeCheckOut, diasCorretos } =
                   validarHorarioPonto();
-
-                if (!isSegunda) {
-                  return (
-                    <div
-                      className="info-banner"
-                      style={{
-                        color: "var(--text-dim)",
-                        background: "transparent",
-                      }}
-                    >
-                      ⚠️ O sistema de presença está fechado hoje.
-                    </div>
-                  );
-                }
-
-                if (!pontoHoje?.check_in) {
-                  return (
-                    <button
-                      className="btn-ponto in"
-                      onClick={() => {
-                        if (podeCheckIn) {
-                          baterPonto();
-                        } else {
-                          exibirPopup(
-                            "🕒 Janela de Check-in: 18:00 às 20:30.",
-                            "aviso",
-                          );
-                        }
-                      }}
-                    >
-                      CHECK-IN
-                    </button>
-                  );
-                }
-
-                if (!pontoHoje?.check_out) {
-                  return (
-                    <button
-                      className="btn-ponto out"
-                      onClick={() => {
-                        if (podeCheckOut) {
-                          setFeedback({ ...feedback, modal: true });
-                        } else {
-                          exibirPopup(
-                            "🕒 Janela de Check-out: 22:00 às 22:30.",
-                            "aviso",
-                          );
-                        }
-                      }}
-                    >
-                      CHECK-OUT
-                    </button>
-                  );
-                }
+                const hojeISO = new Date().toLocaleDateString("en-CA");
+                const registroHoje = historico.find(
+                  (h) => h.data?.substring(0, 10) === hojeISO,
+                );
+                const jaFezIn = !!registroHoje?.check_in;
+                const jaFezOut = !!registroHoje?.check_out;
 
                 return (
-                  <div className="ponto-concluido">✔ Presença confirmada</div>
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "15px",
+                        justifyContent: "center",
+                        marginBottom: "25px",
+                      }}
+                    >
+                      <button
+                        className={`btn-ponto in ${jaFezIn ? "concluido" : ""}`}
+                        disabled={jaFezIn}
+                        onClick={() => {
+                          if (!isDiaDeAula || !podeCheckIn) {
+                            exibirPopup(
+                              `Horário de Check-in: 18:00 às 20:30 (${diasCorretos})`,
+                              "erro",
+                            );
+                            return;
+                          }
+                          baterPonto();
+                        }}
+                        style={
+                          jaFezIn
+                            ? {
+                                backgroundColor: "#2d3748",
+                                cursor: "default",
+                                opacity: 0.8,
+                                flex: 1,
+                              }
+                            : { flex: 1 }
+                        }
+                      >
+                        {jaFezIn ? "✔ CHECK-IN FEITO" : "CHECK-IN"}
+                      </button>
+
+                      <button
+                        className={`btn-ponto out ${jaFezOut ? "concluido" : ""}`}
+                        disabled={jaFezOut || !jaFezIn}
+                        onClick={() => {
+                          if (!jaFezIn) {
+                            exibirPopup("Faça o check-in primeiro!", "erro");
+                            return;
+                          }
+                          if (!isDiaDeAula || !podeCheckOut) {
+                            exibirPopup(
+                              "Check-out liberado a partir das 21:30",
+                              "erro",
+                            );
+                            return;
+                          }
+                          setFeedback({ ...feedback, modal: true });
+                        }}
+                        style={
+                          jaFezOut || !jaFezIn
+                            ? {
+                                backgroundColor: "#2d3748",
+                                cursor: "default",
+                                opacity: 0.6,
+                                flex: 1,
+                              }
+                            : { flex: 1 }
+                        }
+                      >
+                        {jaFezOut ? "✔ CHECK-OUT FEITO" : "CHECK-OUT"}
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        background: "rgba(0, 128, 128, 0.05)",
+                        padding: "20px",
+                        borderRadius: "12px",
+                        border: "1px solid rgba(0, 128, 128, 0.1)",
+                        width: "100%",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <h5
+                        style={{
+                          margin: "0 0 15px 0",
+                          color: "#008080",
+                          fontSize: "0.75rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "1px",
+                        }}
+                      >
+                        🕒 Janelas Oficiais de Registro
+                      </h5>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-around",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div style={{ textAlign: "center" }}>
+                          <span
+                            style={{
+                              display: "block",
+                              color: "var(--text-dim)",
+                              fontSize: "0.65rem",
+                              marginBottom: "5px",
+                            }}
+                          >
+                            ENTRADA
+                          </span>
+                          <strong style={{ fontSize: "1.1rem" }}>
+                            18:00 — 20:30
+                          </strong>
+                        </div>
+                        <div
+                          style={{
+                            width: "1px",
+                            height: "30px",
+                            background: "rgba(0,128,128,0.2)",
+                          }}
+                        ></div>
+                        <div style={{ textAlign: "center" }}>
+                          <span
+                            style={{
+                              display: "block",
+                              color: "var(--text-dim)",
+                              fontSize: "0.65rem",
+                              marginBottom: "5px",
+                            }}
+                          >
+                            SAÍDA
+                          </span>
+                          <strong style={{ fontSize: "1.1rem" }}>
+                            Após 21:30
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 );
               })()}
             </div>
-            <p className="usability-info">
-              Registro processado pelo horário de Brasília.
-              <br />
-              <br />
-              <strong>🕒 Janela de Check-in:</strong> 18:00 às 20:30
-              <br />
-              <strong>🕒 Janela de Check-out:</strong> 22:00 às 22:30
-            </p>
-          </div>
 
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-label">Total de Presenças</span>
-              <div className="stat-value">{totalPresencas}</div>
-            </div>
+            <div className="stats-grid" style={{ marginTop: "30px" }}>
+              <div className="stat-card">
+                <span className="stat-label">Total de Presenças</span>
+                <div className="stat-value">{totalPresencas}</div>
+              </div>
 
-            <div
-              className="stat-card"
-              style={{ marginTop: "12px", textAlign: "left" }}
-            >
-              <span className="stat-label">📅 Próximas Aulas</span>
-              <ul
-                style={{
-                  listStyle: "none",
-                  padding: 0,
-                  marginTop: "10px",
-                  fontSize: "0.85rem",
-                }}
-              >
-                {getProximasSegundas(user.formacao).map((data, i) => (
-                  <li
-                    key={i}
-                    style={{ marginBottom: "5px", color: "var(--text-normal)" }}
-                  >
-                    ● {data} — 18:30h
-                  </li>
-                ))}
-              </ul>
-            </div>
+              <div className="stat-card" style={{ textAlign: "left" }}>
+                <span className="stat-label">📅 Próximas Aulas</span>
+                <ul style={{ paddingLeft: "15px", margin: "10px 0" }}>
+                  {getProximasAulas(user.formacao).map((data, i) => (
+                    <li
+                      key={i}
+                      style={{
+                        marginBottom: "5px",
+                        color:
+                          data === "26/02/2026"
+                            ? "var(--blue-light)"
+                            : "inherit",
+                      }}
+                    >
+                      <span style={{ fontWeight: "bold" }}>{data}</span>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          opacity: 0.8,
+                          marginLeft: "8px",
+                        }}
+                      >
+                        {data === "26/02/2026" ? "🚀 Aula Inaugural" : "18:00h"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Total de Faltas</span>
-              <div className="stat-value faltas">{totalFaltas}</div>
-            </div>
+              <div className="stat-card">
+                <span className="stat-label">Total de Faltas</span>
+                <div className="stat-value faltas">{totalFaltas}</div>
+              </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Status da Sessão</span>
-              <div
-                className="stat-value text-success"
-                style={{ fontSize: "1.2rem" }}
-              >
-                Ativa
+              <div className="stat-card">
+                <span className="stat-label">Status da Sessão</span>
+                <div
+                  className="stat-value text-success"
+                  style={{ fontSize: "1.2rem" }}
+                >
+                  Ativa
+                </div>
               </div>
             </div>
           </div>
 
+          {/* HISTÓRICO COMPLETO - AGORA ALINHADO PERFEITAMENTE */}
           <div
             id="historico-section"
             className="historico-container shadow-card"
+            style={{ width: "100%", boxSizing: "border-box", padding: "20px" }}
           >
             <h3>Meu Histórico Completo</h3>
             <div className="table-responsive">
-              <table className="historico-table">
+              <table className="historico-table" style={{ width: "100%" }}>
                 <thead>
                   <tr>
                     <th>Data</th>
@@ -542,7 +712,6 @@ export default function App() {
                             timeZone: "UTC",
                           })}
                         </td>
-                        {/* Tratamento para exibir apenas HH:mm mesmo com timestamp completo */}
                         <td>
                           {h.check_in
                             ? h.check_in.includes("T")
@@ -567,6 +736,7 @@ export default function App() {
         </main>
       )}
 
+      {/* MODAL DE FEEDBACK (FORA DO WRAPPER DE LARGURA) */}
       {feedback.modal && (
         <div className="modal-overlay">
           <div className="modal-content shadow-xl">

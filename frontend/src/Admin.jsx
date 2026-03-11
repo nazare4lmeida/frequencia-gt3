@@ -5,6 +5,7 @@ import { fetchComToken } from "./Api";
 export default function Admin({ user }) {
   const [busca, setBusca] = useState("");
   const [filtroTurma, setFiltroTurma] = useState("todos");
+  const [proximasAulas, setProximasAulas] = useState([]);
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [alunos, setAlunos] = useState([]);
   const [totalEncontrado, setTotalEncontrado] = useState(0);
@@ -15,8 +16,8 @@ export default function Admin({ user }) {
   const [stats, setStats] = useState({
     totalPresencas: 0,
     sessoesAtivas: 0,
-    concluidosHoje: 0, // Adicionado
-    pendentesSaida: 0, // Adicionado
+    concluidosHoje: 0,
+    pendentesSaida: 0,
     totalAlunos: 0,
   });
   const [carregando, setCarregando] = useState(false);
@@ -43,19 +44,22 @@ export default function Admin({ user }) {
   useEffect(() => {
     const carregarStats = async () => {
       try {
-        // Adicionamos ?dataFiltro=${dataBusca} para os círculos mudarem junto com o calendário
         const res = await fetch(
           `${API_URL}/admin/stats/${filtroTurma}?dataFiltro=${dataBusca}`,
           {
             headers: { Authorization: `Bearer ${user.token}` },
           },
         );
+
         if (res.ok) {
           const data = await res.json();
+          console.log("Dados recebidos da API:", data); // Verifique se concluidosHoje e sessoesAtivas estão vindo
           setStats(data);
+        } else {
+          console.error("Erro na resposta da API:", res.status);
         }
       } catch (err) {
-        console.error("Erro ao carregar estatísticas:", err);
+        console.error("Erro de conexão ao buscar stats:", err);
       }
     };
     carregarStats();
@@ -243,45 +247,115 @@ export default function Admin({ user }) {
     }
   };
 
+  const calcularProximasAulas = useCallback((formacao) => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    let cronogramaAtivo = [];
+
+    if (formacao === "fullstack") {
+      // Fullstack já encerrou, mas mantemos a última data para referência
+      cronogramaAtivo = [
+        "2026-02-02",
+        "2026-02-09",
+        "2026-02-16",
+        "2026-02-23",
+      ];
+    } else {
+      // IA: Apenas Segundas (conforme sua lista corrigida)
+      cronogramaAtivo = [
+        "2026-02-02",
+        "2026-02-09",
+        "2026-02-23",
+        "2026-03-02",
+        "2026-03-09",
+        "2026-03-16",
+        "2026-03-23",
+        "2026-03-30",
+        "2026-04-06",
+        "2026-04-13",
+        "2026-04-22",
+      ];
+    }
+
+    const filtradas = cronogramaAtivo
+      .filter((dataStr) => {
+        const [ano, mes, dia] = dataStr.split("-");
+        return new Date(ano, mes - 1, dia) >= hoje;
+      })
+      .map((d) => {
+        const [ano, mes, dia] = d.split("-");
+        return `${dia}/${mes}/${ano}`;
+      })
+      .slice(0, 5);
+
+    setProximasAulas(filtradas);
+  }, []);
+
+  useEffect(() => {
+    calcularProximasAulas(
+      filtroTurma === "data_analytics" ? "data_analytics" : "fullstack",
+    );
+  }, [filtroTurma, calcularProximasAulas]);
+
   const exportarRelatorio = async () => {
+    // Validação básica para garantir que as datas foram preenchidas
+    if (!periodoExport.inicio || !periodoExport.fim) {
+      alert("Por favor, selecione as datas de início e fim para exportar.");
+      return;
+    }
+
     try {
-      const res = await fetch(`${API_URL}/admin/relatorio/${filtroTurma}`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
+      // CORREÇÃO AQUI: Enviando os parâmetros de data na URL (Query Strings)
+      const res = await fetch(
+        `${API_URL}/admin/relatorio/${filtroTurma}?inicio=${periodoExport.inicio}&fim=${periodoExport.fim}`,
+        {
+          headers: { Authorization: `Bearer ${user.token}` },
+        },
+      );
+
       const dados = await res.json();
 
       if (!dados || dados.length === 0) {
-        alert("Nenhum dado para exportar.");
+        alert("Nenhum dado encontrado para este período.");
         return;
       }
 
-      // Adicionamos Nota e Feedback no cabeçalho
+      // Montagem do cabeçalho (Nota e Feedback incluídos)
       const cabecalho =
         "Nome;Email;Formação;Data;Entrada;Saída;Nota;Feedback\n";
+
       const linhas = dados
         .map(
           (item) =>
-            `${item.Nome};${item.Email};${item.Formacao};${item.Data};${item.Entrada};${item.Saida};${item.Nota};"${item.Feedback.replace(/"/g, '""')}"`,
+            `${item.Nome};${item.Email};${item.Formacao};${item.Data};${item.Entrada};${item.Saida};${item.Nota};"${item.Feedback ? item.Feedback.replace(/"/g, '""') : ""}"`,
         )
         .join("\n");
 
       const conteudoCSV = cabecalho + linhas;
-      // O "\ufeff" é o segredo para o Excel entender os acentos em Português
+
+      // O "\ufeff" resolve o problema de acentuação no Excel brasileiro
       const blob = new Blob(["\ufeff" + conteudoCSV], {
         type: "text/csv;charset=utf-8;",
       });
-      const url = URL.createObjectURL(blob);
 
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
+
+      // Nome do arquivo dinâmico com o período selecionado
       link.setAttribute(
         "download",
-        `frequencia_${filtroTurma}_${new Date().toISOString().split("T")[0]}.csv`,
+        `frequencia_${filtroTurma}_${periodoExport.inicio}_a_${periodoExport.fim}.csv`,
       );
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch {
+
+      // Limpa a URL da memória
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Erro na exportação:", err);
       alert("Erro ao exportar planilha.");
     }
   };
@@ -291,72 +365,132 @@ export default function Admin({ user }) {
       className="app-wrapper"
       style={{ maxWidth: "1100px", margin: "0 auto", padding: "20px" }}
     >
-      <div style={{ marginBottom: "30px" }}>
+      {/* --- HOME DE GESTÃO RÁPIDA COMPACTA E COM FILTRO --- */}
+      <div className="home-admin-header" style={{ marginBottom: "20px" }}>
         <div
+          className="shadow-card"
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            <h2 style={{ margin: 0 }}>Dashboard Administrativo</h2>
-            <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-              Gestão em Tempo Real • Horário de Brasília • Geração Tech 3.0
-            </p>
-          </div>
-          <select
-            className="input-modern"
-            style={{ width: "250px" }}
-            value={filtroTurma}
-            onChange={(e) => setFiltroTurma(e.target.value)}
-          >
-            <option value="todos">Todas as Turmas</option>
-            {FORMACOES.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div
-          style={{
-            marginTop: "20px",
-            background: "var(--border-subtle)",
-            height: "10px",
-            borderRadius: "5px",
-            overflow: "hidden",
+            padding: "15px 25px", // Padding bem reduzido
+            background:
+              "linear-gradient(135deg, var(--card-bg) 0%, rgba(0, 128, 128, 0.08) 100%)",
+            borderLeft: "6px solid #008080",
+            borderRadius: "12px",
           }}
         >
           <div
             style={{
-              width: `${(stats.sessoesAtivas / (stats.totalAlunos || 1)) * 100}%`,
-              background: "#008080",
-              height: "100%",
-              transition: "width 0.5s ease",
+              display: "grid",
+              gridTemplateColumns: "2.5fr 1fr", // Colunas ajustadas
+              gap: "20px",
+              alignItems: "center", // Alinha tudo verticalmente ao centro
             }}
-          />
+          >
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "#008080",
+                    fontWeight: "bold",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Central de Comando Geração Tech 3.0
+                </span>
+
+                {/* REINSERIDO: Filtro discreto dentro do card */}
+                <select
+                  className="input-modern"
+                  style={{
+                    width: "180px",
+                    margin: 0,
+                    padding: "4px 8px",
+                    fontSize: "0.8rem",
+                  }}
+                  value={filtroTurma}
+                  onChange={(e) => setFiltroTurma(e.target.value)}
+                >
+                  <option value="todos">Todas as Formações</option>
+                  {FORMACOES.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <h2 style={{ margin: "2px 0", fontSize: "1.3rem" }}>
+                {proximasAulas[0]
+                  ? `Próxima Aula: ${proximasAulas[0]}`
+                  : "Controle de Cronograma e Presenças"}
+              </h2>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "15px",
+                  alignItems: "center",
+                  marginTop: "8px",
+                }}
+              >
+                <p style={{ fontSize: "0.85rem", margin: 0 }}>
+                  <strong>Foco:</strong>{" "}
+                  {filtroTurma === "fullstack"
+                    ? "Auditoria"
+                    : "Formações de IA"}
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderLeft: "1px solid var(--border-subtle)",
+                paddingLeft: "20px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  color: "var(--text-dim)",
+                  textTransform: "uppercase",
+                }}
+              >
+                Adesão
+              </span>
+              <h1 style={{ margin: "0", color: "#008080", fontSize: "1.6rem" }}>
+                {(
+                  (stats.sessoesAtivas / (stats.totalAlunos || 1)) *
+                  100
+                ).toFixed(0)}
+                %
+              </h1>
+              <div
+                style={{
+                  background: "var(--border-subtle)",
+                  height: "6px",
+                  borderRadius: "3px",
+                  overflow: "hidden",
+                  marginTop: "5px",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${(stats.sessoesAtivas / (stats.totalAlunos || 1)) * 100}%`,
+                    background: "#008080",
+                    height: "100%",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-        <p
-          style={{
-            fontSize: "0.75rem",
-            marginTop: "5px",
-            color: "var(--text-dim)",
-          }}
-        >
-          Adesão da Aula: <strong>{stats.sessoesAtivas || 0} alunos</strong>{" "}
-          fizeram check-in hoje.
-        </p>
       </div>
-
-      <div className="admin-stat-card card-destaque-hoje">
-        <span className="admin-stat-label">CONCLUÍRAM HOJE (SAÍDA OK)</span>
-        <h2 className="admin-stat-number" style={{ color: "#0a6547" }}>
-          {stats.concluidosHoje || 0}
-        </h2>
-      </div>
-
       <div
         style={{
           display: "grid",
@@ -366,13 +500,11 @@ export default function Admin({ user }) {
         }}
       >
         <div
-          className="stat-card"
+          className="stat-card shadow-card"
           style={{
             padding: "20px",
             textAlign: "center",
-            background: "var(--card-bg)",
-            borderRadius: "12px",
-            border: "1px solid var(--border-subtle)",
+            borderTop: "4px solid #008080",
           }}
         >
           <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
@@ -383,28 +515,24 @@ export default function Admin({ user }) {
           </h2>
         </div>
         <div
-          className="stat-card"
+          className="stat-card shadow-card"
           style={{
             padding: "20px",
             textAlign: "center",
-            background: "var(--card-bg)",
-            borderRadius: "12px",
-            border: "1px solid var(--border-subtle)",
+            borderTop: "4px solid var(--text-dim)",
           }}
         >
           <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-            TOTAL HISTÓRICO
+            TOTAL ACUMULADO
           </span>
           <h2 style={{ margin: "5px 0" }}>{stats.totalPresencas || 0}</h2>
         </div>
         <div
-          className="stat-card"
+          className="stat-card shadow-card"
           style={{
             padding: "20px",
             textAlign: "center",
-            background: "var(--card-bg)",
-            borderRadius: "12px",
-            border: "1px solid var(--border-subtle)",
+            borderTop: "4px solid #f59e0b",
           }}
         >
           <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
@@ -463,14 +591,14 @@ export default function Admin({ user }) {
                 padding: "10px 15px",
                 background: "rgba(0, 128, 128, 0.1)",
                 borderRadius: "8px",
-                borderLeft: "4px solid var(--teal-primary)",
+                borderLeft: "4px solid var(--blue-primary)",
               }}
             >
               <span
                 style={{
                   fontSize: "0.9rem",
                   fontWeight: "bold",
-                  color: "var(--teal-primary)",
+                  color: "var(--blue-primary)",
                 }}
               >
                 LISTAGEM DE ALUNOS
@@ -497,6 +625,7 @@ export default function Admin({ user }) {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Aqui usamos o .map direto, pois a lógica de faltas agora é na outra tela */}
                   {alunos.map((aluno) => (
                     <tr
                       key={aluno.email}
@@ -512,7 +641,11 @@ export default function Admin({ user }) {
                             color: "var(--text-dim)",
                           }}
                         >
-                          {aluno.formacao_nome}
+                          {/* Prioriza o nome que vem do banco do GTech */}
+                          {aluno.formacao_nome ||
+                            (aluno.formacao === "fullstack"
+                              ? "Full Stack"
+                              : "IA + Soft Skills")}
                         </div>
                       </td>
                       <td style={{ fontSize: "0.8rem" }}>{aluno.email}</td>
@@ -586,6 +719,39 @@ export default function Admin({ user }) {
             >
               Exportar CSV
             </button>
+          </div>
+          <div
+            className="shadow-card"
+            style={{ padding: "20px", borderLeft: "4px solid #008080" }}
+          >
+            <h4 style={{ color: "#008080", marginBottom: "15px" }}>
+              📅 Próximas Aulas
+            </h4>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
+              {proximasAulas.map((data, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "8px",
+                    background: "rgba(0, 128, 128, 0.05)",
+                    borderRadius: "6px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>Aula {idx + 1}</span>
+                  <strong>{data}</strong>
+                </div>
+              ))}
+              {proximasAulas.length === 0 && (
+                <p style={{ fontSize: "0.8rem" }}>
+                  Nenhuma aula futura encontrada.
+                </p>
+              )}
+            </div>
           </div>
           <div
             className="shadow-card"

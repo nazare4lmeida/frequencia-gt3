@@ -1,4 +1,4 @@
-export const API_URL = 
+export const API_URL =
   window.location.hostname === "localhost" ? "http://localhost:3001/api" : "/api";
 
 export const FORMACOES = [

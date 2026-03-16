@@ -7,8 +7,8 @@ import { API_URL } from "./Constants";
  * @param {object} body - Dados para enviar (opcional)
  */
 export const fetchComToken = async (endpoint, method = "GET", body = null) => {
-  // 1. Busca a sessão atualizada para pegar o token
-  const sessionData = localStorage.getItem("gt3_session");
+  // CORREÇÃO: A chave correta usada no seu App.js é "gtech_session"
+  const sessionData = localStorage.getItem("gtech_session");
   const session = sessionData ? JSON.parse(sessionData) : null;
   const token = session?.userData?.token;
 
@@ -32,18 +32,16 @@ export const fetchComToken = async (endpoint, method = "GET", body = null) => {
   try {
     const res = await fetch(`${API_URL}${endpoint}`, config);
 
-    // 2. TRATAMENTO GLOBAL DE ERRO 401 (TOKEN EXPIRADO)
+    // 2. TRATAMENTO GLOBAL DE ERRO 401 (TOKEN EXPIRADO OU AUSENTE)
     if (res.status === 401) {
-      localStorage.removeItem("gt3_session");
-      window.location.reload(); // Força o refresh para voltar ao login
+      localStorage.removeItem("gtech_session");
+      window.location.reload(); 
       return res;
     }
 
-    // 3. TRATAMENTO GLOBAL DE ERRO 403 (ACESSO PROIBIDO/NEGADO)
-    // Se cair aqui, o aluno está logado, mas o servidor negou a ação específica.
+    // 3. TRATAMENTO GLOBAL DE ERRO 403 (ACESSO NEGADO PELO BACKEND)
     if (res.status === 403) {
-      console.error("Erro 403: O usuário não tem permissão para esta ação ou está fora dos requisitos (ex: geolocalização ou horário).");
-      // Você pode retornar a resposta para tratar o alerta específico na tela de check-in
+      console.error("Erro 403: Acesso negado. Verifique permissões ou requisitos.");
       return res; 
     }
 

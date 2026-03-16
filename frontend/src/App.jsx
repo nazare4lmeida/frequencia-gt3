@@ -271,16 +271,22 @@ export default function App() {
         ...extra,
       });
 
+      // --- INÍCIO DA CORREÇÃO ---
+      if (res.status === 403) {
+        return exibirPopup(
+          "Acesso Negado: Verifique se você está no local da aula ou se o horário de check-in está ativo.",
+          "erro",
+        );
+      }
+      // --- FIM DA CORREÇÃO ---
+
       const data = await res.json();
 
       if (!res.ok) {
-        // Se der erro 500, o 'data.error' vai nos dizer o motivo exato nos logs
         return exibirPopup(data.error || "Erro ao registrar ponto.", "erro");
       }
 
       exibirPopup(data.msg, "sucesso");
-      // FORÇA O RECONHECIMENTO DA PRESENÇA:
-      // Isso busca os dados novos do Supabase e atualiza o estado 'historico'
       await carregarHistorico();
 
       if (!extra.nota) {
@@ -294,7 +300,7 @@ export default function App() {
       setFeedback({ nota: 0, revisao: "", modal: false });
     } catch (err) {
       console.error("Erro bater ponto:", err);
-      exibirPopup("Erro de comunicação com o servidor.", "erro");
+      exibirPopup("Erro de conexão com o servidor.", "erro");
     }
   };
 

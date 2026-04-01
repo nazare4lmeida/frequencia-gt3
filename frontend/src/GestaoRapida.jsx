@@ -1,43 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { fetchComToken } from "./Api";
-import { API_URL, FORMACOES } from "./Constants";
-
-// ─────────────────────────────────────────────
-// CRONOGRAMAS OFICIAIS (fonte única da verdade)
-// ─────────────────────────────────────────────
-const CRONOGRAMAS = {
-  fullstack: ["2026-02-02", "2026-02-13", "2026-02-16", "2026-02-23"],
-  ia: [
-    "2026-02-02",
-    "2026-02-09",
-    "2026-02-23",
-    "2026-03-02",
-    "2026-03-09",
-    "2026-03-16",
-    "2026-03-23",
-    "2026-03-30",
-    "2026-04-06",
-    "2026-04-13",
-  ],
-};
-
-// Retorna quantas aulas do cronograma já ocorreram até agora
-const obterAulasOcorridas = (formacaoId) => {
-  const agora = new Date();
-  const datas = CRONOGRAMAS[formacaoId] || [];
-  return datas.filter((dataStr) => {
-    // A aula conta após as 18:30 do dia
-    const dataAula = new Date(dataStr + "T18:30:00");
-    return dataAula <= agora;
-  }).length;
-};
-
-// Retorna as datas oficiais que já ocorreram para uma formação
-const obterDatasOcorridas = (formacaoId) => {
-  const agora = new Date();
-  const datas = CRONOGRAMAS[formacaoId] || [];
-  return datas.filter((dataStr) => new Date(dataStr + "T18:30:00") <= agora);
-};
+import {
+  API_URL,
+  FORMACOES,
+  obterDatasOcorridas,
+  obterAulasOcorridas,
+} from "./Constants";
 
 export default function GestaoRapida({ user, setView }) {
   const [alunos, setAlunos] = useState([]);
@@ -45,7 +13,7 @@ export default function GestaoRapida({ user, setView }) {
   const [carregando, setCarregando] = useState(true);
   const [statusSalva, setStatusSalva] = useState({});
 
-  // Estados para o Modal de Detalhes
+  // Modal
   const [alunoSelecionado, setAlunoSelecionado] = useState(null);
   const [historicoAluno, setHistoricoAluno] = useState([]);
   const [modalAberto, setModalAberto] = useState(false);
@@ -65,62 +33,80 @@ export default function GestaoRapida({ user, setView }) {
     carregarTodos();
   }, []);
 
-  // ─────────────────────────────────────────────
-  // CARREGAMENTO PRINCIPAL
-  // Busca alunos + histórico completo de todos,
-  // depois recalcula total_presencas filtrando
-  // apenas pelas datas oficiais de cada formação.
-  // ─────────────────────────────────────────────
-  const carregarTodos = async () => {
+  const carregarTodos = useCallback(async () => {
     setCarregando(true);
     try {
-      // 1. Busca lista de alunos
       const resAlunos = await fetchComToken(
-        `/admin/busca?termo=&turma=todos&status=todos`,
+        `/admin/busca?termo=&turma=todos&status=todos&_=${Date.now()}`,
       );
-      if (!resAlunos.ok) return;
+
+      if (!resAlunos.ok) throw new Error("Erro ao buscar alunos");
+
       const dataAlunos = await resAlunos.json();
       const listaAlunos = dataAlunos.alunos || [];
 
-      // 2. Para cada aluno, busca o histórico real e filtra pelo cronograma
-      //    Fazemos em paralelo para ser mais rápido
-      const alunosComPresencasReais = await Promise.all(
-        listaAlunos.map(async (aluno) => {
-          try {
-            const resHist = await fetchComToken(
-              `/historico/aluno/${aluno.email}`,
-            );
-            if (!resHist.ok) return aluno;
+      console.log("RESPOSTA /admin/busca:", dataAlunos);
+      console.log("LISTA ALUNOS:", listaAlunos.slice(0, 20));
 
-            const dadosBrutos = await resHist.json();
-            const datasValidas = obterDatasOcorridas(aluno.formacao);
+      const alunosTratados = listaAlunos.map((aluno) => ({
+        ...aluno,
+        nome: aluno.nome || "",
+        total_presencas: aluno.total_presencas || 0,
+      }));
 
-            // Conta apenas presenças em dias oficiais (deduplicado por data)
-            const datasPresentes = new Set(
-              dadosBrutos
-                .map((p) => p.data.split("T")[0])
-                .filter((d) => datasValidas.includes(d)),
-            );
-
-            return {
-              ...aluno,
-              total_presencas: datasPresentes.size,
-            };
-          } catch {
-            return aluno;
-          }
-        }),
-      );
-
-      setAlunos(alunosComPresencasReais);
+      setAlunos(alunosTratados);
+    } catch (error) {
+      console.error("Erro no carregamento:", error);
+      alert("Erro ao carregar lista de alunos.");
     } finally {
       setCarregando(false);
     }
+  }, []);
+
+  // ─────────────────────────────────────────────
+  // HELPER: calcula faltas finais (fonte única)
+  // ─────────────────────────────────────────────
+  const calcularFaltas = (aluno) => {
+    const totalAulas = obterAulasOcorridas(aluno.formacao);
+    const presencasValidas = Math.min(aluno.total_presencas || 0, totalAulas);
+    const faltasBrutas = Math.max(0, totalAulas - presencasValidas);
+
+    if (aluno.se_ausenta_sempre || aluno.justificou_ausencia) {
+      return {
+        totalAulas,
+        presencasValidas,
+        faltasExibidas: 0,
+        sufixoAbono: " (JUSTIFICADO)",
+      };
+    }
+
+    const faltasExibidas =
+      (aluno.saldo_abonos || 0) > 0
+        ? Math.max(0, faltasBrutas - aluno.saldo_abonos)
+        : faltasBrutas;
+
+    return { totalAulas, presencasValidas, faltasExibidas, sufixoAbono: "" };
+  };
+
+  // ─────────────────────────────────────────────
+  // STATUS DO ALUNO PARA RELATÓRIO
+  // ─────────────────────────────────────────────
+  const calcularStatus = (aluno) => {
+    if (aluno.se_ausenta_sempre || aluno.justificativa_ativa) {
+      return "JUSTIFICADO";
+    }
+
+    const { faltasExibidas, totalAulas } = calcularFaltas(aluno);
+    const pct = totalAulas > 0 ? (faltasExibidas / totalAulas) * 100 : 0;
+
+    if (pct === 0) return "REGULAR";
+    if (pct <= 45) return "ATENÇÃO";
+    return "CRÍTICO";
   };
 
   const salvarNome = async (email, novoNome) => {
     const alunoOriginal = alunos.find((a) => a.email === email);
-    if (!novoNome || alunoOriginal.nome === novoNome) return;
+    if (!novoNome || alunoOriginal?.nome === novoNome) return;
     setStatusSalva((prev) => ({ ...prev, [email]: "salvando" }));
     try {
       const res = await fetch(`${API_URL}/admin/limpeza-nome`, {
@@ -145,41 +131,31 @@ export default function GestaoRapida({ user, setView }) {
   };
 
   // ─────────────────────────────────────────────
-  // HELPER: calcula faltas finais de um aluno
-  // (usado tanto na tabela quanto na exportação)
+  // EXPORTAÇÃO COMPLETA (todos os alunos)
   // ─────────────────────────────────────────────
-  const calcularFaltas = (aluno) => {
-    const totalAulas = obterAulasOcorridas(aluno.formacao);
-    const presencasValidas = Math.min(aluno.total_presencas || 0, totalAulas);
-    const faltasBrutas = Math.max(0, totalAulas - presencasValidas);
+  const exportarRelatorioCompleto = () => {
+    if (alunosFiltrados.length === 0)
+      return alert("Nenhum dado para exportar.");
 
-    if (aluno.se_ausenta_sempre) {
-      return { presencasValidas, faltasExibidas: 0, sufixoAbono: " (ABONADO)" };
-    }
-
-    const faltasExibidas =
-      aluno.saldo_abonos > 0
-        ? Math.max(0, faltasBrutas - aluno.saldo_abonos)
-        : faltasBrutas;
-
-    return { presencasValidas, faltasExibidas, sufixoAbono: "" };
-  };
-
-  const exportarFaltosos = () => {
-    const faltosos = alunosFiltrados.filter((a) => {
-      const { faltasExibidas } = calcularFaltas(a);
-      return faltasExibidas > 0;
-    });
-
-    if (faltosos.length === 0) return alert("Nenhum faltoso encontrado.");
-
-    const cabecalho = "Nome;Email;Turma;Presencas;Faltas;Status\n";
-    const linhas = faltosos
+    const cabecalho =
+      "Nome;Email;Formação;Aulas Dadas;Presenças;Faltas Brutas;Abonos;Faltas Finais;Status\n";
+    const linhas = alunosFiltrados
       .map((a) => {
-        const { presencasValidas, faltasExibidas, sufixoAbono } =
+        const { totalAulas, presencasValidas, faltasExibidas } =
           calcularFaltas(a);
-        const status = sufixoAbono ? "ABONADO" : "";
-        return `${a.nome || "Sem Nome"};${a.email};${a.formacao};${presencasValidas};${faltasExibidas};${status}`;
+        const faltasBrutas = Math.max(0, totalAulas - presencasValidas);
+        const abonos = a.se_ausenta_sempre ? faltasBrutas : a.saldo_abonos || 0;
+        return [
+          a.nome || "Sem Nome",
+          a.email,
+          a.formacao_nome || a.formacao || "",
+          totalAulas,
+          presencasValidas,
+          faltasBrutas,
+          abonos,
+          faltasExibidas,
+          calcularStatus(a),
+        ].join(";");
       })
       .join("\n");
 
@@ -189,7 +165,38 @@ export default function GestaoRapida({ user, setView }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `auditoria_faltas_gtech.csv`);
+    link.setAttribute(
+      "download",
+      `relatorio_gtech_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    link.click();
+  };
+
+  const exportarFaltosos = () => {
+    const faltosos = alunosFiltrados.filter(
+      (a) => calcularFaltas(a).faltasExibidas > 0,
+    );
+    if (faltosos.length === 0) return alert("Nenhum faltoso encontrado.");
+
+    const cabecalho = "Nome;Email;Turma;Presenças;Faltas;Status\n";
+    const linhas = faltosos
+      .map((a) => {
+        const { presencasValidas, faltasExibidas, sufixoAbono } =
+          calcularFaltas(a);
+        return `${a.nome || "Sem Nome"};${a.email};${a.formacao};${presencasValidas};${faltasExibidas};${sufixoAbono ? "JUSTIFICADO" : ""}`;
+      })
+      .join("\n");
+
+    const blob = new Blob(["\ufeff" + cabecalho + linhas], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `faltosos_gtech_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
     link.click();
   };
 
@@ -208,16 +215,12 @@ export default function GestaoRapida({ user, setView }) {
       if (res.ok) {
         const dadosBrutos = await res.json();
         const datasValidas = obterDatasOcorridas(aluno.formacao);
-
         const historicoFiltrado = dadosBrutos.filter((p) =>
           datasValidas.includes(p.data.split("T")[0]),
         );
-
-        // Recalcula e sincroniza o total na tabela principal
         const totalReal = new Set(
           historicoFiltrado.map((p) => p.data.split("T")[0]),
         ).size;
-
         setAlunos((prev) =>
           prev.map((a) =>
             a.email === aluno.email ? { ...a, total_presencas: totalReal } : a,
@@ -252,7 +255,7 @@ export default function GestaoRapida({ user, setView }) {
   const registrarManual = async () => {
     if (!window.confirm("Registrar presença manual?")) return;
     try {
-      const res = await fetchComToken(`/admin/ponto-manual`, "POST", {
+      const res = await fetchComToken("/admin/ponto-manual", "POST", {
         email: alunoSelecionado.email,
         ...manualPonto,
       });
@@ -266,7 +269,10 @@ export default function GestaoRapida({ user, setView }) {
   };
 
   const alunosFiltrados = alunos.filter((a) =>
-    filtroTurma === "todos" ? true : a.formacao === filtroTurma,
+    filtroTurma === "todos"
+      ? true
+      : String(a.formacao).toLowerCase().trim() ===
+        String(filtroTurma).toLowerCase().trim(),
   );
 
   if (carregando && !modalAberto)
@@ -291,7 +297,14 @@ export default function GestaoRapida({ user, setView }) {
               Sincronizado com cronograma e justificativas de ausência.
             </p>
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+            }}
+          >
             <button
               onClick={() => setView("importacao")}
               className="btn-secondary"
@@ -300,11 +313,21 @@ export default function GestaoRapida({ user, setView }) {
               📥 Importar Justificativas
             </button>
             <button
+              onClick={exportarRelatorioCompleto}
+              className="btn-secondary"
+              style={{
+                border: "1px solid var(--teal-primary)",
+                color: "var(--teal-primary)",
+              }}
+            >
+              📋 Exportar Completo
+            </button>
+            <button
               onClick={exportarFaltosos}
               className="btn-secondary"
               style={{ border: "1px solid #ef4444", color: "#ef4444" }}
             >
-              Exportar Faltosos
+              ⚠️ Exportar Faltosos
             </button>
             <select
               className="input-modern"
@@ -325,29 +348,121 @@ export default function GestaoRapida({ user, setView }) {
           </div>
         </div>
 
+        {/* Resumo rápido por turma */}
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginBottom: "20px",
+            flexWrap: "wrap",
+          }}
+        >
+          {FORMACOES.map((f) => {
+            const turmaAlunos = alunos.filter((a) => a.formacao === f.id);
+            const faltosos = turmaAlunos.filter(
+              (a) => calcularFaltas(a).faltasExibidas > 0,
+            ).length;
+            const aulasOcorridas = obterAulasOcorridas(f.id);
+            return (
+              <div
+                key={f.id}
+                style={{
+                  flex: 1,
+                  minWidth: "160px",
+                  padding: "12px 16px",
+                  background: "rgba(0,128,128,0.05)",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(0,128,128,0.15)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--text-dim)",
+                    textTransform: "uppercase",
+                    marginBottom: "4px",
+                  }}
+                >
+                  {f.nome} <span style={{ opacity: 0.6 }}>({f.tag})</span>
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: "bold",
+                    color: "var(--teal-primary)",
+                  }}
+                >
+                  {turmaAlunos.length}
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "normal",
+                      color: "var(--text-dim)",
+                      marginLeft: "6px",
+                    }}
+                  >
+                    alunos
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: faltosos > 0 ? "#ef4444" : "var(--text-dim)",
+                  }}
+                >
+                  {faltosos > 0 ? `${faltosos} com falta` : "Todos em dia"} ·{" "}
+                  {aulasOcorridas} aula{aulasOcorridas !== 1 ? "s" : ""} dada
+                  {aulasOcorridas !== 1 ? "s" : ""}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         <table className="historico-table">
           <thead>
             <tr>
               <th style={{ width: "25%" }}>ALUNO (E-MAIL)</th>
+              <th style={{ textAlign: "center" }}>AULAS</th>
               <th style={{ textAlign: "center" }}>CHECK-INS</th>
               <th style={{ textAlign: "center" }}>FALTAS</th>
+              <th style={{ textAlign: "center" }}>STATUS</th>
               <th>NOME PARA CERTIFICADO</th>
               <th style={{ textAlign: "right" }}>AÇÕES</th>
             </tr>
           </thead>
           <tbody>
             {alunosFiltrados.map((aluno) => {
-              const { presencasValidas, faltasExibidas, sufixoAbono } =
-                calcularFaltas(aluno);
-              const status = statusSalva[aluno.email];
+              const {
+                totalAulas,
+                presencasValidas,
+                faltasExibidas,
+                sufixoAbono,
+              } = calcularFaltas(aluno);
+              const statusAluno = calcularStatus(aluno);
+              const statusCor =
+                {
+                  REGULAR: "#10b981",
+                  ATENÇÃO: "#f59e0b",
+                  CRÍTICO: "#ef4444",
+                  JUSTIFICADO: "#1188b0",
+                }[statusAluno] || "var(--text-dim)";
+              const statusBg =
+                {
+                  REGULAR: "rgba(16,185,129,0.1)",
+                  ATENÇÃO: "rgba(245,158,11,0.1)",
+                  CRÍTICO: "rgba(239,68,68,0.1)",
+                  JUSTIFICADO: "rgba(99,102,241,0.1)",
+                }[statusAluno] || "transparent";
+              const st = statusSalva[aluno.email];
 
               return (
                 <tr
                   key={aluno.email}
                   style={{
                     background:
-                      faltasExibidas > 3
-                        ? "rgba(239, 68, 68, 0.05)"
+                      statusAluno === "CRÍTICO"
+                        ? "rgba(239,68,68,0.04)"
                         : "transparent",
                   }}
                 >
@@ -356,18 +471,29 @@ export default function GestaoRapida({ user, setView }) {
                     <div
                       style={{ fontSize: "0.65rem", color: "var(--text-dim)" }}
                     >
-                      {aluno.formacao_nome}
-                      {aluno.justificou_ausencia && (
+                      {aluno.formacao_nome || aluno.formacao}
+                      {(aluno.justificou_ausencia ||
+                        aluno.tem_log_justificativa) && (
                         <span
                           style={{
                             marginLeft: "5px",
                             color: "var(--teal-primary)",
                           }}
                         >
-                          [Forms OK]
+                          [JUSTIFICADO]
                         </span>
                       )}
                     </div>
+                  </td>
+
+                  <td
+                    style={{
+                      textAlign: "center",
+                      fontSize: "0.8rem",
+                      color: "var(--text-dim)",
+                    }}
+                  >
+                    {totalAulas}
                   </td>
 
                   <td
@@ -388,8 +514,23 @@ export default function GestaoRapida({ user, setView }) {
                       fontWeight: "bold",
                     }}
                   >
-                    {faltasExibidas}
-                    {sufixoAbono}
+                    {sufixoAbono ? "–" : faltasExibidas}
+                  </td>
+
+                  <td style={{ textAlign: "center" }}>
+                    <span
+                      style={{
+                        fontSize: "0.65rem",
+                        fontWeight: "bold",
+                        color: statusCor,
+                        background: statusBg,
+                        padding: "3px 8px",
+                        borderRadius: "20px",
+                        border: `1px solid ${statusCor}33`,
+                      }}
+                    >
+                      {statusAluno}
+                    </span>
                   </td>
 
                   <td>
@@ -409,9 +550,9 @@ export default function GestaoRapida({ user, setView }) {
                           fontSize: "0.8rem",
                           flex: 1,
                           borderColor:
-                            status === "ok"
+                            st === "ok"
                               ? "#10b981"
-                              : status === "erro"
+                              : st === "erro"
                                 ? "#ef4444"
                                 : "var(--border-subtle)",
                         }}
@@ -419,9 +560,9 @@ export default function GestaoRapida({ user, setView }) {
                         onBlur={(e) => salvarNome(aluno.email, e.target.value)}
                       />
                       <span style={{ width: "20px" }}>
-                        {status === "salvando" && "⏳"}
-                        {status === "ok" && "✅"}
-                        {status === "erro" && "❌"}
+                        {st === "salvando" && "⏳"}
+                        {st === "ok" && "✅"}
+                        {st === "erro" && "❌"}
                       </span>
                     </div>
                   </td>
@@ -442,6 +583,7 @@ export default function GestaoRapida({ user, setView }) {
         </table>
       </div>
 
+      {/* MODAL */}
       {modalAberto && alunoSelecionado && (
         <div className="modal-overlay">
           <div
@@ -453,9 +595,43 @@ export default function GestaoRapida({ user, setView }) {
                 display: "flex",
                 justifyContent: "space-between",
                 marginBottom: "20px",
+                alignItems: "flex-start",
               }}
             >
-              <h3>{alunoSelecionado.nome}</h3>
+              <div>
+                <h3 style={{ margin: 0 }}>
+                  {alunoSelecionado.nome || alunoSelecionado.email}
+                </h3>
+                {(() => {
+                  const { totalAulas, presencasValidas, faltasExibidas } =
+                    calcularFaltas(alunoSelecionado);
+                  const status = calcularStatus(alunoSelecionado);
+                  return (
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text-dim)",
+                        marginTop: "4px",
+                      }}
+                    >
+                      {presencasValidas}/{totalAulas} aulas · {faltasExibidas}{" "}
+                      falta{faltasExibidas !== 1 ? "s" : ""} ·{" "}
+                      <strong
+                        style={{
+                          color: {
+                            REGULAR: "#10b981",
+                            ATENÇÃO: "#f59e0b",
+                            CRÍTICO: "#ef4444",
+                            JUSTIFICADO: "#21a4d7",
+                          }[status],
+                        }}
+                      >
+                        {status}
+                      </strong>
+                    </div>
+                  );
+                })()}
+              </div>
               <div style={{ display: "flex", gap: "5px" }}>
                 <button
                   onClick={() => setEditando(false)}
@@ -508,8 +684,16 @@ export default function GestaoRapida({ user, setView }) {
                               timeZone: "UTC",
                             })}
                           </td>
-                          <td>{h.check_in || "--:--"}</td>
-                          <td>{h.check_out || "--:--"}</td>
+                          <td>
+                            {h.check_in
+                              ? String(h.check_in).slice(11, 16) || h.check_in
+                              : "--:--"}
+                          </td>
+                          <td>
+                            {h.check_out
+                              ? String(h.check_out).slice(11, 16) || h.check_out
+                              : "--:--"}
+                          </td>
                         </tr>
                       ))
                     ) : (
@@ -543,7 +727,7 @@ export default function GestaoRapida({ user, setView }) {
                   onChange={(e) =>
                     setDadosEdicao({ ...dadosEdicao, nome: e.target.value })
                   }
-                  placeholder="Nome"
+                  placeholder="Nome completo"
                 />
                 <button
                   className="btn-secondary"
@@ -553,7 +737,7 @@ export default function GestaoRapida({ user, setView }) {
                   Salvar Alterações
                 </button>
                 <hr />
-                <h5 style={{ margin: 0 }}>Ponto Manual</h5>
+                <h5 style={{ margin: 0 }}>Registrar Ponto Manual</h5>
                 <div style={{ display: "flex", gap: "5px" }}>
                   <input
                     type="date"
@@ -591,10 +775,11 @@ export default function GestaoRapida({ user, setView }) {
                   style={{ width: "100%" }}
                   onClick={registrarManual}
                 >
-                  Registrar Manual (Check-in)
+                  Registrar Manual
                 </button>
               </div>
             )}
+
             <button
               className="btn-secondary"
               style={{ width: "100%", marginTop: "20px" }}

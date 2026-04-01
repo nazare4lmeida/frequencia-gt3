@@ -58,7 +58,6 @@ export default function App() {
   });
 
   const [view, setView] = useState("home");
-  const [alunosAuditoria, setAlunosAuditoria] = useState([]);
   const [form, setForm] = useState(dadosSalvos || { email: "", dataNasc: "" });
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
@@ -441,9 +440,9 @@ export default function App() {
           onVoltar={() => setView("home")}
         />
       ) : view === "limpeza" && user.role === "admin" ? (
-        <GestaoRapida user={user} setView={setView} onAlunosCarregados={setAlunosAuditoria} />
+        <GestaoRapida user={user} setView={setView} />
       ) : view === "importacao" && user.role === "admin" ? ( // ADICIONE ISSO
-        <ImportacaoJustificativas user={user} setView={setView} alunos={alunosAuditoria} />
+        <ImportacaoJustificativas user={user} setView={setView} />
       ) : view === "perfil" && user.role !== "admin" ? (
         <Perfil
           user={user}

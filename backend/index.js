@@ -455,6 +455,96 @@ app.get(
   },
 );
 
+
+app.get(
+  "/api/admin/duplicados",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    try {
+      const { data: alunos, error } = await supabase
+        .from("alunos")
+        .select("id, nome, email, formacao, data_nascimento, created_at")
+        .range(0, 10000);
+
+      if (error) throw error;
+
+      const grupos = (alunos || []).reduce((acc, aluno) => {
+        const emailNormalizado = aluno.email?.trim().toLowerCase();
+        if (!emailNormalizado) return acc;
+        if (!acc[emailNormalizado]) acc[emailNormalizado] = [];
+        acc[emailNormalizado].push({
+          ...aluno,
+          email: emailNormalizado,
+        });
+        return acc;
+      }, {});
+
+      const duplicados = Object.entries(grupos)
+        .filter(([, registros]) => registros.length > 1)
+        .map(([email, registros]) => ({
+          email,
+          total: registros.length,
+          registros: registros.sort((a, b) => {
+            const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return aTime - bTime;
+          }),
+        }))
+        .sort((a, b) => b.total - a.total || a.email.localeCompare(b.email));
+
+      res.json({
+        totalEmailsDuplicados: duplicados.length,
+        totalRegistrosDuplicados: duplicados.reduce(
+          (acc, item) => acc + item.total,
+          0,
+        ),
+        duplicados,
+      });
+    } catch (err) {
+      console.error("ERRO DUPLICADOS:", err);
+      res.status(500).json({ error: "Erro ao verificar e-mails duplicados." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/aluno-id/:id",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: "ID do aluno é obrigatório." });
+    }
+
+    try {
+      const { data: aluno, error: erroBusca } = await supabase
+        .from("alunos")
+        .select("id, nome, email")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (erroBusca) throw erroBusca;
+      if (!aluno) {
+        return res.status(404).json({ error: "Registro não encontrado." });
+      }
+
+      const { error } = await supabase.from("alunos").delete().eq("id", id);
+      if (error) throw error;
+
+      res.json({
+        msg: "Registro duplicado removido com sucesso!",
+        removido: aluno,
+      });
+    } catch (err) {
+      console.error("ERRO REMOVER DUPLICADO:", err);
+      res.status(500).json({ error: "Erro ao remover registro duplicado." });
+    }
+  },
+);
+
 // ==========================================
 // ADMIN — CRUD ALUNOS
 // ==========================================

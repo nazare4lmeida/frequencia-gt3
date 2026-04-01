@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { FORMACOES, API_URL } from "./Constants";
 import { fetchComToken } from "./Api";
 
-export default function Admin({ user }) {
+export default function Admin({ user, setView }) {
   const [busca, setBusca] = useState("");
   const [filtroTurma, setFiltroTurma] = useState("todos");
   const [proximasAulas, setProximasAulas] = useState([]);
@@ -21,6 +21,13 @@ export default function Admin({ user }) {
     totalAlunos: 0,
   });
   const [carregando, setCarregando] = useState(false);
+  const [duplicados, setDuplicados] = useState([]);
+  const [resumoDuplicados, setResumoDuplicados] = useState({
+    totalEmailsDuplicados: 0,
+    totalRegistrosDuplicados: 0,
+  });
+  const [carregandoDuplicados, setCarregandoDuplicados] = useState(false);
+  const [removendoDuplicadoId, setRemovendoDuplicadoId] = useState(null);
 
   // Estados para o Modal de Detalhes
   const [alunoSelecionado, setAlunoSelecionado] = useState(null);
@@ -64,6 +71,66 @@ export default function Admin({ user }) {
     };
     carregarStats();
   }, [filtroTurma, dataBusca, user.token]);
+
+  const carregarDuplicados = useCallback(async () => {
+    setCarregandoDuplicados(true);
+    try {
+      const res = await fetchComToken("/admin/duplicados");
+      if (res.ok) {
+        const data = await res.json();
+        setDuplicados(data.duplicados || []);
+        setResumoDuplicados({
+          totalEmailsDuplicados: data.totalEmailsDuplicados || 0,
+          totalRegistrosDuplicados: data.totalRegistrosDuplicados || 0,
+        });
+      }
+    } catch (err) {
+      console.error("Erro ao carregar duplicados:", err);
+    } finally {
+      setCarregandoDuplicados(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    carregarDuplicados();
+  }, [carregarDuplicados]);
+
+  const removerDuplicado = async (registro) => {
+    if (!registro?.id) {
+      alert("Não foi possível identificar o registro duplicado.");
+      return;
+    }
+
+    const nomeExibicao = registro.nome || registro.email;
+    if (
+      !window.confirm(
+        `Remover o registro duplicado de ${nomeExibicao}? Essa ação apaga apenas este cadastro específico.`,
+      )
+    ) {
+      return;
+    }
+
+    setRemovendoDuplicadoId(registro.id);
+    try {
+      const res = await fetchComToken(
+        `/admin/aluno-id/${encodeURIComponent(registro.id)}`,
+        "DELETE",
+      );
+
+      if (res.ok) {
+        alert("Registro duplicado removido com sucesso!");
+        await Promise.all([carregarDuplicados(), buscarAlunos(busca)]);
+      } else {
+        const erro = await res.json();
+        alert(`Erro: ${erro.error || "Não foi possível remover o duplicado."}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro de conexão ao remover duplicado.");
+    } finally {
+      setRemovendoDuplicadoId(null);
+    }
+  };
 
   // 2. Lógica de busca e filtros
   const buscarAlunos = useCallback(
@@ -628,7 +695,7 @@ export default function Admin({ user }) {
                   {/* Aqui usamos o .map direto, pois a lógica de faltas agora é na outra tela */}
                   {alunos.map((aluno) => (
                     <tr
-                      key={aluno.email}
+                      key={aluno.id || aluno.email}
                       style={{ borderBottom: "1px solid var(--border-subtle)" }}
                     >
                       <td style={{ padding: "12px 0" }}>
@@ -753,6 +820,105 @@ export default function Admin({ user }) {
               )}
             </div>
           </div>
+          <div
+            className="shadow-card"
+            style={{ padding: "20px", borderLeft: "4px solid #ef4444" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "12px",
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <h4 style={{ color: "#ef4444", marginBottom: "6px" }}>
+                  📧 E-mails duplicados
+                </h4>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
+                  {resumoDuplicados.totalEmailsDuplicados} e-mail(s) com duplicidade · {resumoDuplicados.totalRegistrosDuplicados} registro(s) encontrados
+                </div>
+              </div>
+              <button
+                className="btn-secondary"
+                onClick={carregarDuplicados}
+                disabled={carregandoDuplicados}
+              >
+                {carregandoDuplicados ? "Verificando..." : "Verificar novamente"}
+              </button>
+            </div>
+
+            {carregandoDuplicados ? (
+              <p style={{ fontSize: "0.85rem" }}>Analisando registros duplicados...</p>
+            ) : duplicados.length === 0 ? (
+              <p style={{ fontSize: "0.85rem", margin: 0 }}>
+                Nenhum e-mail duplicado encontrado no momento.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {duplicados.map((grupo) => (
+                  <div
+                    key={grupo.email}
+                    style={{
+                      border: "1px solid rgba(239,68,68,0.25)",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      background: "rgba(239,68,68,0.05)",
+                    }}
+                  >
+                    <div style={{ fontWeight: "700", marginBottom: "8px" }}>
+                      {grupo.email}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {grupo.registros.map((registro, index) => (
+                        <div
+                          key={registro.id || `${grupo.email}-${index}`}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "10px",
+                            padding: "10px",
+                            borderRadius: "8px",
+                            background: index === 0 ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.04)",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <div style={{ fontSize: "0.8rem" }}>
+                            <div style={{ fontWeight: "600" }}>
+                              {registro.nome || "Sem nome"}
+                              {index === 0 ? " · Manter" : " · Duplicado"}
+                            </div>
+                            <div style={{ color: "var(--text-dim)" }}>
+                              Turma: {registro.formacao || "-"} · ID: {registro.id || "-"}
+                            </div>
+                          </div>
+                          {index > 0 && (
+                            <button
+                              className="btn-danger-outline"
+                              style={{
+                                border: "1px solid #ef4444",
+                                color: "#ef4444",
+                                padding: "6px 10px",
+                              }}
+                              onClick={() => removerDuplicado(registro)}
+                              disabled={removendoDuplicadoId === registro.id}
+                            >
+                              {removendoDuplicadoId === registro.id ? "Removendo..." : "Remover"}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div
             className="shadow-card"
             style={{ padding: "20px", borderLeft: "4px solid #f59e0b" }}
@@ -948,7 +1114,7 @@ export default function Admin({ user }) {
                 </button>
 
                 <button
-                  onClick={() => (window.location.href = "/admin/limpeza")}
+                  onClick={() => setView && setView("limpeza")}
                   className="btn-secondary"
                 >
                   Limpar Nomes

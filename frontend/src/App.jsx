@@ -7,6 +7,7 @@ import Perfil from "./Perfil";
 import { fetchComToken } from "./Api";
 import GestaoRapida from "./GestaoRapida";
 import HomeAdmin from "./HomeAdmin";
+import ImportacaoJustificativas from "./ImportacaoJustificativas";
 
 const getProximasAulas = (formacao) => {
   const hoje = new Date();
@@ -14,7 +15,7 @@ const getProximasAulas = (formacao) => {
 
   let cronogramaAtivo = [];
   if (formacao === "fullstack") {
-    cronogramaAtivo = ["02/02/2026", "09/02/2026", "16/02/2026", "23/02/2026"];
+    cronogramaAtivo = ["02/02/2026", "13/02/2026", "16/02/2026", "23/02/2026"];
   } else {
     cronogramaAtivo = [
       "02/02/2026",
@@ -27,7 +28,6 @@ const getProximasAulas = (formacao) => {
       "30/03/2026",
       "06/04/2026",
       "13/04/2026",
-      "22/04/2026",
     ];
   }
 
@@ -58,6 +58,7 @@ export default function App() {
   });
 
   const [view, setView] = useState("home");
+  const [alunosAuditoria, setAlunosAuditoria] = useState([]);
   const [form, setForm] = useState(dadosSalvos || { email: "", dataNasc: "" });
   const [historico, setHistorico] = useState([]);
   const [popup, setPopup] = useState({ show: false, msg: "", tipo: "" });
@@ -379,6 +380,16 @@ export default function App() {
                 >
                   Edição
                 </button>
+                <button
+                  className="btn-secondary"
+                  style={{
+                    border:
+                      view === "importacao" ? "2px solid #008080" : "none",
+                  }}
+                  onClick={() => setView("importacao")}
+                >
+                  Importação
+                </button>
               </>
             ) : (
               // Links exclusivos do Aluno
@@ -430,7 +441,15 @@ export default function App() {
           onVoltar={() => setView("home")}
         />
       ) : view === "limpeza" && user.role === "admin" ? (
-        <GestaoRapida user={user} setView={setView} />
+        <GestaoRapida user={user} setView={setView} onAlunosCarregados={setAlunosAuditoria} />
+      ) : view === "importacao" && user.role === "admin" ? ( // ADICIONE ISSO
+        <ImportacaoJustificativas user={user} setView={setView} alunos={alunosAuditoria} />
+      ) : view === "perfil" && user.role !== "admin" ? (
+        <Perfil
+          user={user}
+          setUser={setUser}
+          onVoltar={() => setView("home")}
+        />
       ) : (
         /* 4. LAYOUT EXCLUSIVO DO ALUNO (SÓ APARECE SE NÃO FOR ADMIN) */
         <main

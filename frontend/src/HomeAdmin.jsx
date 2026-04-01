@@ -14,11 +14,17 @@ export default function HomeAdmin({ user }) {
 
   // --- CRONOGRAMA OFICIAL GTECH 3.0 ---
   const TEMAS_AULAS = {
+    "02/02/2026": "Introdução",
+    "09/02/2026": "Fundamentos de IA e Machine Learning",
+    "16/02/2026": "Introdução à Inteligência Artificial",
+    "23/02/2026": "Soft Skills para Profissionais de Tecnologia",
     "02/03/2026": "Introdução à IA Generativa e Prompt Engineering",
     "09/03/2026": "Modelos de Linguagem (LLMs) e Aplicações Práticas",
     "16/03/2026": "Soft Skills: Comunicação Assertiva no Meio Tech",
     "23/03/2026": "IA aplicada à Produtividade e Automação",
     "30/03/2026": "Ética e Viés em Sistemas de Inteligência Artificial",
+    "06/04/2026": "Desenvolvimento de Chatbots e Assistentes Virtuais",
+    "13/04/2026": "Encerramento e Apresentação de Projetos Finais",
   };
 
   // Função para descobrir qual a próxima segunda-feira de aula
@@ -27,6 +33,10 @@ export default function HomeAdmin({ user }) {
     hoje.setHours(0, 0, 0, 0);
 
     const datasVivas = [
+      "2026-02-02",
+      "2026-02-09",
+      "2026-02-16",
+      "2026-02-23",
       "2026-03-02",
       "2026-03-09",
       "2026-03-16",

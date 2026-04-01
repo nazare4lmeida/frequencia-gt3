@@ -30,8 +30,9 @@ const verificarToken = (req, res, next) => {
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
+    // Mude de 403 para 401
     return res
-      .status(403)
+      .status(401)
       .json({ error: "Acesso negado. Faça login novamente." });
   }
 
@@ -493,6 +494,85 @@ app.patch(
   },
 );
 
+app.post(
+  "/api/admin/importar-justificativa",
+  verificarToken,
+  verificarAdmin,
+  async (req, res) => {
+    const { email, nome, curso, recorrencia } = req.body;
+    const recorrenciaLimpa = recorrencia?.toLowerCase() || "";
+    const eSempre = recorrenciaLimpa.includes("sempre");
+    const eUmaVez =
+      recorrenciaLimpa.includes("uma vez") ||
+      recorrenciaLimpa.includes("algumas");
+
+    try {
+      let alunoExistente = null;
+
+      // 1. Tenta buscar primeiro pelo e-mail
+      if (email) {
+        const { data } = await supabase
+          .from("alunos")
+          .select("*")
+          .eq("email", email)
+          .maybeSingle();
+        alunoExistente = data;
+      }
+      await supabase.from("justificativas_logs").insert([
+        {
+          aluno_email: emailFormatado,
+          tipo_recorrencia: recorrenciaLimpa,
+        },
+      ]);
+
+      // 2. Se não achou por e-mail (ou não veio e-mail), tenta buscar pelo NOME exato (ignore case)
+      if (!alunoExistente && nome) {
+        const { data } = await supabase
+          .from("alunos")
+          .select("*")
+          .ilike("nome", nome)
+          .maybeSingle();
+        alunoExistente = data;
+      }
+
+      if (!alunoExistente) {
+        // Se ainda não existir, cria o aluno (mas aqui o e-mail é obrigatório no seu banco?)
+        // Se o e-mail for obrigatório, use o nome como e-mail provisório ou retorne erro
+        if (!email)
+          return res.status(400).json({
+            error: `Aluno ${nome} não encontrado e não possui e-mail para cadastro.`,
+          });
+
+        await supabase.from("alunos").insert([
+          {
+            email,
+            nome,
+            formacao: curso || "fullstack",
+            justificou_ausencia: true,
+            se_ausenta_sempre: eSempre,
+            saldo_abonos: eUmaVez ? 1 : 0,
+          },
+        ]);
+      } else {
+        // Aluno existe, apenas atualiza os abonos
+        const novoSaldo =
+          (alunoExistente.saldo_abonos || 0) + (eUmaVez ? 1 : 0);
+        await supabase
+          .from("alunos")
+          .update({
+            justificou_ausencia: true,
+            se_ausenta_sempre: alunoExistente.se_ausenta_sempre || eSempre,
+            saldo_abonos: novoSaldo,
+          })
+          .eq("id", alunoExistente.id);
+      }
+      res.json({ msg: "OK" });
+    } catch (err) {
+      res.status(500).json({ error: "Erro no servidor" });
+    }
+  },
+);
+
 app.get("/api/historico/aluno/:email", verificarToken, async (req, res) => {
   try {
     const emailFormatado = req.params.email.trim().toLowerCase();
@@ -522,33 +602,38 @@ app.get(
   verificarAdmin,
   async (req, res) => {
     const { turma } = req.params;
-    const { dataFiltro } = req.query; 
+    const { dataFiltro } = req.query;
     const { data: hoje } = getBrasiliaTime();
-    const dataAlvo = dataFiltro || hoje; 
+    const dataAlvo = dataFiltro || hoje;
 
     try {
       // 1. Lista de emails da turma (para saber quem pertence a onde)
       let queryAlunos = supabase.from("alunos").select("email");
       if (turma !== "todos") queryAlunos = queryAlunos.eq("formacao", turma);
-      
+
       const { data: listaAlunos, error: errA } = await queryAlunos;
       if (errA) throw errA;
 
       const emailsTurma = (listaAlunos || []).map((a) => a.email);
 
       // 2. Total Histórico (Geral da turma ou do sistema)
-      let queryTotal = supabase.from("presencas").select("*", { count: "exact", head: true });
+      let queryTotal = supabase
+        .from("presencas")
+        .select("*", { count: "exact", head: true });
       if (turma !== "todos") {
         queryTotal = queryTotal.in("aluno_email", emailsTurma);
       }
       const { count: totalPresencas } = await queryTotal;
 
       // 3. Dados dos Círculos (Baseados na dataAlvo)
-      let queryHoje = supabase.from("presencas").select("check_in, check_out").eq("data", dataAlvo);
+      let queryHoje = supabase
+        .from("presencas")
+        .select("check_in, check_out")
+        .eq("data", dataAlvo);
       if (turma !== "todos") {
         queryHoje = queryHoje.in("aluno_email", emailsTurma);
       }
-      
+
       const { data: presencasDia, error: errH } = await queryHoje;
       if (errH) throw errH;
 
@@ -559,14 +644,14 @@ app.get(
         totalPresencas: totalPresencas || 0,
         totalAlunos: (listaAlunos || []).length, // Corrigido aqui
         sessoesAtivas: dados.length,
-        concluidosHoje: dados.filter(p => p.check_out).length,
-        pendentesSaida: dados.filter(p => !p.check_out).length
+        concluidosHoje: dados.filter((p) => p.check_out).length,
+        pendentesSaida: dados.filter((p) => !p.check_out).length,
       });
     } catch (err) {
       console.error("ERRO NO STATS:", err);
       res.status(500).json({ error: "Erro ao carregar estatísticas." });
     }
-  }
+  },
 );
 app.get(
   "/api/admin/relatorio/:turma",

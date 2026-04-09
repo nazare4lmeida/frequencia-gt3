@@ -70,6 +70,7 @@ export default function App() {
     const salvo = localStorage.getItem("gtech_theme");
     return salvo ? JSON.parse(salvo) : true;
   });
+  const [loading, setLoading] = useState(false);
 
   const [currentTime, setCurrentTime] = useState(
     new Date().toLocaleTimeString("pt-BR", {
@@ -176,6 +177,14 @@ export default function App() {
 
   const handleLogin = async () => {
     try {
+      setLoading(true);
+      const validEmailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+      if (!validEmailRegex.test(form.email)) {
+        exibirPopup("Por favor, insira um email válido.", "erro");
+        return;
+      }
+      // 1. CONVERSÃO DE FORMATO: DD/MM/AAAA -> AAAA-MM-DD
       const partes = form.dataNasc.split("/");
       if (partes.length !== 3 || form.dataNasc.length < 10) {
         exibirPopup("Digite a data completa: DD/MM/AAAA", "erro");
@@ -194,6 +203,8 @@ export default function App() {
       });
 
       const data = await res.json();
+
+      console.log("Resposta do login:", data);
 
       if (!res.ok) {
         exibirPopup(data.error || "Erro no login.", "erro");
@@ -221,6 +232,8 @@ export default function App() {
     } catch (err) {
       console.error("Erro no login GTech:", err);
       exibirPopup("Erro de conexão.", "erro");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -319,6 +332,8 @@ export default function App() {
         setDadosSalvos={setDadosSalvos}
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
+        popup={popup}
+        loading={loading}
       />
     );
   }
